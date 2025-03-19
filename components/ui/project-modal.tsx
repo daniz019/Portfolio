@@ -89,31 +89,8 @@ export function ProjectModal({ isOpen, onClose, project }: ProjectModalProps) {
   }
 
   const toggleFullscreen = () => {
-    if (!document.fullscreenElement && !(document as any).webkitFullscreenElement) {
-      if (imageContainerRef.current) {
-        try {
-          if ((imageContainerRef.current as any).webkitRequestFullscreen) {
-            (imageContainerRef.current as any).webkitRequestFullscreen()
-          } else if (imageContainerRef.current.requestFullscreen) {
-            imageContainerRef.current.requestFullscreen()
-          }
-        } catch (err) {
-          console.error('Erro ao entrar em tela cheia:', err)
-        }
-        setIsFullscreen(true)
-      }
-    } else {
-      try {
-        if ((document as any).webkitExitFullscreen) {
-          (document as any).webkitExitFullscreen()
-        } else if (document.exitFullscreen) {
-          document.exitFullscreen()
-        }
-      } catch (err) {
-        console.error('Erro ao sair da tela cheia:', err)
-      }
-      setIsFullscreen(false)
-    }
+    // Simular fullscreen para compatibilidade com iOS
+    setIsFullscreen(!isFullscreen);
   }
 
   const handleThumbnailClick = () => {
@@ -122,21 +99,21 @@ export function ProjectModal({ isOpen, onClose, project }: ProjectModalProps) {
     }
   }
 
-  // Atualiza o estado quando o usuário sai da tela cheia
-  const handleFullscreenChange = () => {
-    const isInFullscreen = !!document.fullscreenElement || !!(document as any).webkitFullscreenElement
-    setIsFullscreen(isInFullscreen)
-  }
-
+  // Adicionado para fechar fullscreen ao pressionar ESC
   React.useEffect(() => {
-    document.addEventListener("fullscreenchange", handleFullscreenChange)
-    document.addEventListener("webkitfullscreenchange", handleFullscreenChange)
-    return () => {
-      document.removeEventListener("fullscreenchange", handleFullscreenChange)
-      document.removeEventListener("webkitfullscreenchange", handleFullscreenChange)
+    const handleEscKey = (event: KeyboardEvent) => {
+      if (event.key === 'Escape' && isFullscreen) {
+        setIsFullscreen(false)
+      }
     }
-  }, [])
+    
+    window.addEventListener('keydown', handleEscKey)
+    return () => {
+      window.removeEventListener('keydown', handleEscKey)
+    }
+  }, [isFullscreen])
 
+  // Remover ouvintes de evento nativo fullscreen (não é usado mais)
   // Adicione o estilo global para a animação
   React.useEffect(() => {
     const style = document.createElement('style')
@@ -156,26 +133,42 @@ export function ProjectModal({ isOpen, onClose, project }: ProjectModalProps) {
   }, [galleryIndex])
 
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto bg-gradient-to-br from-background to-primary/5">
-        <DialogHeader>
-          <DialogTitle className="text-2xl font-bold">{project.title}</DialogTitle>
-        </DialogHeader>
+    <Dialog open={isOpen} onOpenChange={(open) => {
+      // Ao fechar o modal, certifique-se de que o fullscreen também é fechado
+      if (!open && isFullscreen) {
+        setIsFullscreen(false);
+      }
+      onClose();
+    }}>
+      <DialogContent className={`max-w-4xl max-h-[90vh] overflow-y-auto bg-gradient-to-br from-background to-primary/5 ${isFullscreen ? 'p-0 max-w-full max-h-full h-screen m-0 rounded-none' : ''}`}>
+        {isFullscreen ? (
+          <div className="absolute top-4 right-4 z-[9999]">
+            <button
+              onClick={toggleFullscreen}
+              className="w-10 h-10 rounded-full bg-black/50 text-white flex items-center justify-center"
+            >
+              <Minimize2 className="h-5 w-5" />
+            </button>
+          </div>
+        ) : (
+          <DialogHeader>
+            <DialogTitle className="text-2xl font-bold">{project.title}</DialogTitle>
+          </DialogHeader>
+        )}
         
-        <div className="mt-8">
+        <div className={`${isFullscreen ? 'mt-0 h-full' : 'mt-8'}`}>
           {/* Galeria de Imagens */}
           <div 
             ref={imageContainerRef}
-            className={`
-              relative group bg-black rounded-lg overflow-hidden
-              ${isFullscreen ? 'fixed inset-0 z-[9999] w-screen h-screen' : 'aspect-video'}
-            `}
+            className={`relative group bg-black/10 rounded-lg overflow-hidden ${
+              isFullscreen ? 'fixed inset-0 z-[9999] bg-black h-full flex items-center justify-center' : 'aspect-video'
+            }`}
             onTouchStart={handleTouchStart}
             onTouchMove={handleTouchMove}
             onTouchEnd={handleTouchEnd}
           >
-            <div className="absolute inset-0 flex items-center justify-center">
-              <div className={`relative ${isFullscreen ? 'w-screen h-screen' : 'w-full aspect-video'}`}>
+            <div className={`relative ${isFullscreen ? 'w-full h-screen flex items-center justify-center' : 'w-full h-full'}`}>
+              <div className={`relative ${isFullscreen ? 'w-full h-full' : 'aspect-video mb-6'}`}>
                 {showVideo ? (
                   <iframe
                     src={`https://www.youtube.com/embed/${project.youtubeId}?rel=0`}
@@ -189,7 +182,7 @@ export function ProjectModal({ isOpen, onClose, project }: ProjectModalProps) {
                       src={`https://i.ytimg.com/vi/${project.youtubeId}/maxresdefault.jpg`}
                       alt={`${project.title} - Thumbnail`}
                       fill
-                      className={`${isFullscreen ? 'object-contain' : 'object-cover'} rounded-lg`}
+                      className={`${isFullscreen ? 'object-contain w-full h-full' : 'object-cover'} rounded-lg`}
                       priority={true}
                       quality={100}
                       onError={(e) => {
@@ -209,21 +202,29 @@ export function ProjectModal({ isOpen, onClose, project }: ProjectModalProps) {
                     </div>
                   </div>
                 ) : (
-                  <div className="relative w-full h-full">
+                  <div 
+                    className={`
+                      relative 
+                      ${isFullscreen ? 'w-full h-screen' : 'w-full h-full'}
+                      transition-transform duration-500 ease-in-out
+                    `}
+                  >
                     <Image
                       key={galleryIndex}
                       src={gallery[galleryIndex]}
                       alt={`${project.title} - Imagem`}
                       fill
-                      sizes={isFullscreen ? "100vw" : "50vw"}
                       className={`
-                        ${isFullscreen ? 'object-contain' : 'object-cover'} 
+                        ${isFullscreen ? 'object-contain w-full h-full' : 'object-cover'} 
                         rounded-lg 
                         transition-all 
                         duration-500 
                         ease-in-out
+                        animate-in 
+                        fade-in
                         ${slideDirection === 'left' ? 'slide-in-from-right' : ''}
                         ${slideDirection === 'right' ? 'slide-in-from-left' : ''}
+                        ${!slideDirection ? 'zoom-in-95' : ''}
                       `}
                       priority={true}
                       quality={100}
@@ -264,98 +265,96 @@ export function ProjectModal({ isOpen, onClose, project }: ProjectModalProps) {
                 </div>
               </>
             )}
-
-            {/* Botão de Tela Cheia */}
-            {!showVideo && !gallery[galleryIndex].includes('youtube.com/embed') && (
+            
+            {/* Botão de Tela Cheia (apenas na visualização normal) */}
+            {!isFullscreen && !showVideo && !gallery[galleryIndex].includes('youtube.com/embed') && (
               <div className="absolute top-2 right-2">
                 <button
                   onClick={toggleFullscreen}
                   className="w-10 h-10 rounded-full bg-black/50 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
                 >
-                  {isFullscreen ? (
-                    <Minimize2 className="h-5 w-5" />
-                  ) : (
-                    <Maximize2 className="h-5 w-5" />
-                  )}
+                  <Maximize2 className="h-5 w-5" />
                 </button>
               </div>
             )}
           </div>
 
-          {/* Conteúdo em duas colunas */}
-          <div className="grid md:grid-cols-2 gap-8 mt-10">
-            <div className="space-y-8">
-              <div>
-                <h3 className="text-lg font-semibold mb-3 flex items-center gap-2">
-                  <Badge variant="outline" className="bg-primary/10 text-primary border-primary/20">
-                    Descrição
-                  </Badge>
-                </h3>
-                <p className="text-muted-foreground">{project.description}</p>
-              </div>
-
-              <div>
-                <h3 className="text-lg font-semibold mb-3 flex items-center gap-2">
-                  <Badge variant="outline" className="bg-secondary/10 text-secondary border-secondary/20">
-                    Desafio
-                  </Badge>
-                </h3>
-                <p className="text-muted-foreground">{project.challenge}</p>
-              </div>
-
-              <div>
-                <h3 className="text-lg font-semibold mb-3 flex items-center gap-2">
-                  <Badge variant="outline" className="bg-accent/10 text-accent border-accent/20">
-                    Solução
-                  </Badge>
-                </h3>
-                <p className="text-muted-foreground">{project.solution}</p>
-              </div>
-            </div>
-
-            <div className="space-y-8">
-              <div>
-                <h3 className="text-lg font-semibold mb-3">Tecnologias</h3>
-                <div className="flex flex-wrap gap-2">
-                  {project.technologies.map((tech) => (
-                    <Badge
-                      key={tech}
-                      variant="outline"
-                      className="bg-background/50 border-primary/20"
-                    >
-                      {tech}
+          {/* Conteúdo em duas colunas - oculto quando em fullscreen */}
+          {!isFullscreen && (
+            <div className="grid md:grid-cols-2 gap-8 mt-10">
+              <div className="space-y-8">
+                <div>
+                  <h3 className="text-lg font-semibold mb-3 flex items-center gap-2">
+                    <Badge variant="outline" className="bg-primary/10 text-primary border-primary/20">
+                      Descrição
                     </Badge>
-                  ))}
+                  </h3>
+                  <p className="text-muted-foreground">{project.description}</p>
+                </div>
+
+                <div>
+                  <h3 className="text-lg font-semibold mb-3 flex items-center gap-2">
+                    <Badge variant="outline" className="bg-secondary/10 text-secondary border-secondary/20">
+                      Desafio
+                    </Badge>
+                  </h3>
+                  <p className="text-muted-foreground">{project.challenge}</p>
+                </div>
+
+                <div>
+                  <h3 className="text-lg font-semibold mb-3 flex items-center gap-2">
+                    <Badge variant="outline" className="bg-accent/10 text-accent border-accent/20">
+                      Solução
+                    </Badge>
+                  </h3>
+                  <p className="text-muted-foreground">{project.solution}</p>
                 </div>
               </div>
 
-              {(project.github || project.link) && (
+              <div className="space-y-8">
                 <div>
-                  <h3 className="text-lg font-semibold mb-3">Links</h3>
-                  <div className="flex flex-col gap-3">
-                    {project.github && (
-                      <Button
-                        className="w-full bg-gradient-to-r from-primary to-secondary hover:opacity-90 transition-opacity"
-                        onClick={() => window.open(project.github, "_blank")}
+                  <h3 className="text-lg font-semibold mb-3">Tecnologias</h3>
+                  <div className="flex flex-wrap gap-2">
+                    {project.technologies.map((tech) => (
+                      <Badge
+                        key={tech}
+                        variant="outline"
+                        className="bg-background/50 border-primary/20"
                       >
-                        <Github className="mr-2 h-4 w-4" />
-                        Ver Código
-                      </Button>
-                    )}
-                    {project.link && (
-                      <Button
-                        className="w-full bg-gradient-to-r from-secondary to-accent hover:opacity-90 transition-opacity"
-                        onClick={() => window.open(project.link, "_blank")}
-                      >
-                        <ExternalLink className="mr-2 h-4 w-4" />
-                        Ver Demo
-                      </Button>
-                    )}
+                        {tech}
+                      </Badge>
+                    ))}
                   </div>
                 </div>
-              )}
+
+                {(project.github || project.link) && (
+                  <div>
+                    <h3 className="text-lg font-semibold mb-3">Links</h3>
+                    <div className="flex flex-col gap-3">
+                      {project.github && (
+                        <Button
+                          className="w-full bg-gradient-to-r from-primary to-secondary hover:opacity-90 transition-opacity"
+                          onClick={() => window.open(project.github, "_blank")}
+                        >
+                          <Github className="mr-2 h-4 w-4" />
+                          Ver Código
+                        </Button>
+                      )}
+                      {project.link && (
+                        <Button
+                          className="w-full bg-gradient-to-r from-secondary to-accent hover:opacity-90 transition-opacity"
+                          onClick={() => window.open(project.link, "_blank")}
+                        >
+                          <ExternalLink className="mr-2 h-4 w-4" />
+                          Ver Demo
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
             </div>
-          </div>
+          )}
         </div>
       </DialogContent>
     </Dialog>
