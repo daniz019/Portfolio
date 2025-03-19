@@ -165,11 +165,11 @@ export function ProjectModal({ isOpen, onClose, project }: ProjectModalProps) {
           <div 
             ref={imageContainerRef}
             className={`relative group aspect-video bg-black/10 rounded-lg overflow-hidden ${
-              isFullscreen ? 'fixed inset-0 z-[9999] bg-black w-full h-full' : ''
+              isFullscreen ? 'fixed inset-0 z-[9999] bg-black w-screen h-screen' : ''
             }`}
             style={{
-              maxWidth: '100%',
-              maxHeight: '100%',
+              maxWidth: '100vw',
+              maxHeight: '100vh',
               WebkitBackfaceVisibility: 'hidden',
               WebkitTransform: 'translate3d(0, 0, 0)',
             }}
@@ -192,7 +192,16 @@ export function ProjectModal({ isOpen, onClose, project }: ProjectModalProps) {
                       src={`https://i.ytimg.com/vi/${project.youtubeId}/maxresdefault.jpg`}
                       alt={`${project.title} - Thumbnail`}
                       fill
-                      className={`${isFullscreen ? 'object-contain w-full h-full' : 'object-cover'} rounded-lg`}
+                      className={`
+                        ${isFullscreen ? 'object-contain' : 'object-cover'} 
+                        rounded-lg 
+                        w-full 
+                        h-full
+                      `}
+                      style={{
+                        maxWidth: isFullscreen ? '100vw' : '100%',
+                        maxHeight: isFullscreen ? '100vh' : '100%',
+                      }}
                       priority={true}
                       quality={100}
                       onError={(e) => {
@@ -215,7 +224,7 @@ export function ProjectModal({ isOpen, onClose, project }: ProjectModalProps) {
                   <div 
                     className={`
                       relative 
-                      ${isFullscreen ? 'w-full h-screen' : 'w-full h-full'}
+                      ${isFullscreen ? 'w-screen h-screen flex items-center justify-center' : 'w-full h-full'}
                       transition-transform duration-500 ease-in-out
                     `}
                   >
@@ -225,7 +234,7 @@ export function ProjectModal({ isOpen, onClose, project }: ProjectModalProps) {
                       alt={`${project.title} - Imagem`}
                       fill
                       className={`
-                        ${isFullscreen ? 'object-contain w-full h-full' : 'object-cover'} 
+                        ${isFullscreen ? 'object-contain' : 'object-cover'} 
                         rounded-lg 
                         transition-all 
                         duration-500 
@@ -236,6 +245,10 @@ export function ProjectModal({ isOpen, onClose, project }: ProjectModalProps) {
                         ${slideDirection === 'right' ? 'slide-in-from-left' : ''}
                         ${!slideDirection ? 'zoom-in-95' : ''}
                       `}
+                      style={{
+                        maxWidth: isFullscreen ? '100vw' : '100%',
+                        maxHeight: isFullscreen ? '100vh' : '100%',
+                      }}
                       priority={true}
                       quality={100}
                     />
