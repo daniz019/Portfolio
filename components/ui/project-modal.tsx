@@ -121,20 +121,33 @@ export function ProjectModal({ isOpen, onClose, project }: ProjectModalProps) {
   const toggleFullscreen = () => {
     // Simular fullscreen para compatibilidade com iOS
     const newFullscreenState = !isFullscreen;
+    
+    // Primeiro atualizamos o estado
     setIsFullscreen(newFullscreenState);
     
-    // Adiciona/remove classe no body para forçar fundo preto no iOS
+    // Depois aplicamos todas as mudanças necessárias
     if (newFullscreenState) {
+      // Entrando em tela cheia
       document.body.classList.add('ios-fullscreen-active');
+      document.documentElement.style.overflow = 'hidden';
+      document.body.style.overflow = 'hidden';
+      document.documentElement.style.backgroundColor = '#000000';
+      document.body.style.backgroundColor = '#000000';
+      
+      // Força o foco no botão para garantir que ele seja clicável
+      if (imageContainerRef.current) {
+        const fullscreenButton = imageContainerRef.current.querySelector('button');
+        if (fullscreenButton) {
+          fullscreenButton.focus();
+        }
+      }
     } else {
+      // Saindo da tela cheia
       document.body.classList.remove('ios-fullscreen-active');
-      // Forçar saída do fullscreen no iOS
-      setTimeout(() => {
-        document.documentElement.style.overflow = '';
-        document.body.style.overflow = '';
-        document.documentElement.style.backgroundColor = '';
-        document.body.style.backgroundColor = '';
-      }, 50);
+      document.documentElement.style.overflow = '';
+      document.body.style.overflow = '';
+      document.documentElement.style.backgroundColor = '';
+      document.body.style.backgroundColor = '';
     }
   }
 
@@ -148,8 +161,7 @@ export function ProjectModal({ isOpen, onClose, project }: ProjectModalProps) {
   React.useEffect(() => {
     const handleEscKey = (event: KeyboardEvent) => {
       if (event.key === 'Escape' && isFullscreen) {
-        setIsFullscreen(false)
-        document.body.classList.remove('ios-fullscreen-active');
+        toggleFullscreen(); // Usar a função toggleFullscreen em vez de apenas mudar o estado
       }
     }
     
@@ -159,50 +171,18 @@ export function ProjectModal({ isOpen, onClose, project }: ProjectModalProps) {
     }
   }, [isFullscreen])
 
-  // Prevenir scroll quando em tela cheia no iOS
+  // Prevenir scroll e garantir fundo preto quando em tela cheia no iOS
   React.useEffect(() => {
-    if (isFullscreen) {
-      document.documentElement.style.overflow = 'hidden';
-      document.body.style.overflow = 'hidden';
-      // Força background preto para todo o documento
-      document.documentElement.style.backgroundColor = '#000000';
-      document.body.style.backgroundColor = '#000000';
-      
-      // Adicionar um evento de toque para iOS
-      const handleTouchEndOnBody = (e: TouchEvent) => {
-        if (isFullscreen) {
-          // Verifica se o toque foi no botão de sair
-          const exitButton = document.querySelector('.exit-fullscreen-button');
-          if (exitButton && exitButton.contains(e.target as Node)) {
-            e.preventDefault();
-            toggleFullscreen();
-          }
-        }
-      };
-      
-      document.body.addEventListener('touchend', handleTouchEndOnBody);
-      
-      return () => {
-        document.body.removeEventListener('touchend', handleTouchEndOnBody);
-        document.documentElement.style.overflow = '';
-        document.body.style.overflow = '';
-        document.documentElement.style.backgroundColor = '';
-        document.body.style.backgroundColor = '';
-      };
-    } else {
+    // Essa parte foi movida para dentro da função toggleFullscreen
+    return () => {
+      // Cleanup ao desmontar
       document.documentElement.style.overflow = '';
       document.body.style.overflow = '';
       document.documentElement.style.backgroundColor = '';
       document.body.style.backgroundColor = '';
-      
-      return () => {
-        document.documentElement.style.overflow = '';
-        document.body.style.overflow = '';
-        document.documentElement.style.backgroundColor = '';
-        document.body.style.backgroundColor = '';
-      };
-    }
-  }, [isFullscreen]);
+      document.body.classList.remove('ios-fullscreen-active');
+    };
+  }, []);
 
   // Adicione o estilo global para a animação e fix para iOS
   React.useEffect(() => {
@@ -227,54 +207,29 @@ export function ProjectModal({ isOpen, onClose, project }: ProjectModalProps) {
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => {
-      // Ao fechar o modal, certifique-se de que o fullscreen também é fechado
-      if (!open && isFullscreen) {
-        setIsFullscreen(false);
-        document.body.classList.remove('ios-fullscreen-active');
-        document.documentElement.style.overflow = '';
-        document.body.style.overflow = '';
-        document.documentElement.style.backgroundColor = '';
-        document.body.style.backgroundColor = '';
+      if (!open) {
+        // Primeiro saímos da tela cheia se estiver ativa
+        if (isFullscreen) {
+          setIsFullscreen(false);
+          document.body.classList.remove('ios-fullscreen-active');
+          document.documentElement.style.overflow = '';
+          document.body.style.overflow = '';
+          document.documentElement.style.backgroundColor = '';
+          document.body.style.backgroundColor = '';
+        }
+        // Depois fechamos o modal
+        onClose();
       }
-      onClose();
     }}>
       <DialogContent className={`
         ${isFullscreen 
-          ? 'p-0 !max-w-none !max-h-none !w-full !h-screen !m-0 !rounded-none !inset-0 !top-0 !left-0 !translate-x-0 !translate-y-0 !border-0 fixed ios-fullscreen-fix bg-black [&_[data-dialog-close]]:hidden' 
+          ? 'p-0 !max-w-none !max-h-none !w-full !h-screen !m-0 !rounded-none !inset-0 !top-0 !left-0 !translate-x-0 !translate-y-0 !border-0 fixed ios-fullscreen-fix bg-black' 
           : 'max-w-4xl max-h-[90vh]'
         } overflow-y-auto bg-gradient-to-br from-background to-primary/5`}>
-        {isFullscreen ? (
-          <div className="absolute top-6 right-6 z-[9999]">
-            <button
-              onClick={toggleFullscreen}
-              onTouchEnd={(e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                toggleFullscreen();
-              }}
-              onTouchStart={(e) => {
-                e.preventDefault();
-                e.stopPropagation();
-              }}
-              className="w-20 h-20 rounded-full bg-black/80 text-white flex items-center justify-center border-2 border-white/40 shadow-lg active:scale-95 transition-transform touch-manipulation exit-fullscreen-button"
-              style={{ 
-                WebkitTapHighlightColor: 'transparent',
-                WebkitAppearance: 'none',
-                WebkitUserSelect: 'none',
-                touchAction: 'manipulation'
-              }}
-              aria-label="Sair da tela cheia"
-            >
-              <div className="flex items-center justify-center w-full h-full">
-                <Minimize2 className="h-10 w-10" />
-              </div>
-              <span className="sr-only">Sair da tela cheia</span>
-            </button>
+        {!isFullscreen && (
+          <div className="mb-6">
+            <h2 className="text-2xl font-bold">{project.title}</h2>
           </div>
-        ) : (
-          <DialogHeader>
-            <DialogTitle className="text-2xl font-bold">{project.title}</DialogTitle>
-          </DialogHeader>
         )}
         
         <div className={`${isFullscreen ? 'mt-0 h-full' : 'mt-8'}`}>
@@ -288,6 +243,23 @@ export function ProjectModal({ isOpen, onClose, project }: ProjectModalProps) {
             onTouchMove={handleTouchMove}
             onTouchEnd={handleTouchEnd}
           >
+            <div className={`absolute top-6 right-6 z-[9999] ${isFullscreen ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'} transition-opacity`}>
+              <button
+                onClick={toggleFullscreen}
+                className="w-14 h-14 rounded-full bg-black/80 text-white flex items-center justify-center border border-white/40 shadow-lg active:scale-95 transition-transform touch-manipulation"
+                style={{ WebkitTapHighlightColor: 'transparent' }}
+              >
+                {isFullscreen ? (
+                  <Minimize2 className="h-7 w-7" />
+                ) : (
+                  <Maximize2 className="h-6 w-6" />
+                )}
+                <span className="sr-only">
+                  {isFullscreen ? 'Sair da tela cheia' : 'Entrar em tela cheia'}
+                </span>
+              </button>
+            </div>
+
             <div className={`relative ${isFullscreen ? 'w-full h-full flex items-center justify-center' : 'w-full h-full'}`}>
               <div className={`relative ${isFullscreen ? 'w-full h-full flex items-center justify-center' : 'aspect-video mb-6'}`}>
                 {showVideo ? (
@@ -397,20 +369,6 @@ export function ProjectModal({ isOpen, onClose, project }: ProjectModalProps) {
                   ))}
                 </div>
               </>
-            )}
-            
-            {/* Botão de Tela Cheia (apenas na visualização normal) */}
-            {!isFullscreen && !showVideo && !gallery[galleryIndex].includes('youtube.com/embed') && (
-              <div className="absolute top-2 right-2">
-                <button
-                  onClick={toggleFullscreen}
-                  className="w-10 h-10 rounded-full bg-black/50 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity active:scale-95 transition-transform touch-manipulation"
-                  style={{ WebkitTapHighlightColor: 'transparent' }}
-                >
-                  <Maximize2 className="h-5 w-5" />
-                  <span className="sr-only">Entrar em tela cheia</span>
-                </button>
-              </div>
             )}
           </div>
 
