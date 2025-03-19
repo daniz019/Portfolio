@@ -1,8 +1,8 @@
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { Github, ExternalLink, ChevronLeft, ChevronRight, ZoomIn, ZoomOut, Maximize2, Minimize2, Play } from "lucide-react"
-import { useState, useRef } from "react"
+import { Github, ExternalLink, ChevronLeft, ChevronRight, ZoomIn, ZoomOut, Maximize2, Minimize2, X } from "lucide-react"
+import { useState, useRef, useEffect } from "react"
 import React from "react"
 import Image from "next/image"
 
@@ -48,12 +48,17 @@ export function ProjectModal({ isOpen, onClose, project }: ProjectModalProps) {
   const [galleryIndex, setGalleryIndex] = useState(0)
   const [showVideo, setShowVideo] = useState(false)
   const [isFullscreen, setIsFullscreen] = useState(false)
+  const [iOSDevice, setIOSDevice] = useState(false)
   const [touchStart, setTouchStart] = useState<number | null>(null)
   const [slideDirection, setSlideDirection] = useState<'left' | 'right' | null>(null)
-  const [scale, setScale] = useState(1)
-  const [lastDistance, setLastDistance] = useState<number | null>(null)
   const imageContainerRef = useRef<HTMLDivElement>(null)
   const gallery = project.gallery || [project.image]
+
+  // Detecta se é um dispositivo iOS
+  useEffect(() => {
+    const userAgent = window.navigator.userAgent.toLowerCase();
+    setIOSDevice(/iphone|ipad|ipod/.test(userAgent));
+  }, []);
 
   const nextImage = () => {
     setSlideDirection('left')
@@ -66,86 +71,54 @@ export function ProjectModal({ isOpen, onClose, project }: ProjectModalProps) {
   }
 
   const handleTouchStart = (e: React.TouchEvent) => {
-    // Detectar se é gesto com um dedo (swipe) ou dois dedos (pinch)
-    if (e.touches.length === 1) {
-      setTouchStart(e.touches[0].clientX)
-    } else if (e.touches.length === 2) {
-      // Calcula a distância inicial entre os dois dedos
-      const distance = getDistanceBetweenTouches(e);
-      setLastDistance(distance);
-    }
+    setTouchStart(e.touches[0].clientX)
   }
 
   const handleTouchMove = (e: React.TouchEvent) => {
-    // Gesto com um dedo - swipe para navegação
-    if (e.touches.length === 1 && touchStart !== null && gallery.length > 1 && scale === 1) {
-      const currentTouch = e.touches[0].clientX
-      const diff = touchStart - currentTouch
+    if (touchStart === null || gallery.length <= 1) return
 
-      // Se o deslize for maior que 50px, muda a imagem
-      if (Math.abs(diff) > 50) {
-        if (diff > 0) {
-          nextImage() // Deslize para a esquerda -> próxima imagem
-        } else {
-          prevImage() // Deslize para a direita -> imagem anterior
-        }
-        setTouchStart(null)
+    const currentTouch = e.touches[0].clientX
+    const diff = touchStart - currentTouch
+
+    // Se o deslize for maior que 50px, muda a imagem
+    if (Math.abs(diff) > 50) {
+      if (diff > 0) {
+        nextImage() // Deslize para a esquerda -> próxima imagem
+      } else {
+        prevImage() // Deslize para a direita -> imagem anterior
       }
-    } 
-    // Gesto com dois dedos - pinch to zoom
-    else if (e.touches.length === 2 && lastDistance !== null && !gallery[galleryIndex].includes('youtube.com/embed')) {
-      e.preventDefault(); // Previne o comportamento padrão do navegador
-      
-      // Calcula a nova distância entre os dedos
-      const currentDistance = getDistanceBetweenTouches(e);
-      
-      // Calcula o fator de escala
-      const scaleFactor = 0.01; // Ajuste a sensibilidade aqui
-      let newScale = scale;
-      
-      if (currentDistance > lastDistance) {
-        // Zoom in
-        newScale = Math.min(scale + scaleFactor, 3); // Limita o zoom máximo a 3x
-      } else if (currentDistance < lastDistance) {
-        // Zoom out
-        newScale = Math.max(scale - scaleFactor, 1); // Não permite zoom menor que 1x
-      }
-      
-      setScale(newScale);
-      setLastDistance(currentDistance);
+      setTouchStart(null)
     }
   }
 
   const handleTouchEnd = () => {
-    setTouchStart(null);
-    setLastDistance(null);
+    setTouchStart(null)
   }
 
-  // Função para calcular a distância entre dois pontos de toque
-  const getDistanceBetweenTouches = (e: React.TouchEvent): number => {
-    const touch1 = e.touches[0];
-    const touch2 = e.touches[1];
-    return Math.hypot(
-      touch2.clientX - touch1.clientX,
-      touch2.clientY - touch1.clientY
-    );
-  };
-
-  // Reset zoom quando mudar de imagem
-  React.useEffect(() => {
-    setScale(1);
-  }, [galleryIndex]);
-
-  // Reset zoom quando fechar o modal
-  React.useEffect(() => {
-    if (!isOpen) {
-      setScale(1);
+  const toggleFullscreen = () => {
+    // Para dispositivos iOS, usamos nossa própria implementação de fullscreen
+    if (iOSDevice) {
+      setIsFullscreen(!isFullscreen);
+      return;
+    }
+    
+    // Para outros dispositivos, usamos a API Fullscreen padrão
+    if (!document.fullscreenElement) {
+      if (imageContainerRef.current) {
+        imageContainerRef.current.requestFullscreen().catch(err => {
+          // Fallback para o nosso fullscreen simulado em caso de erro
+          console.log("Erro ao entrar em fullscreen:", err);
+          setIsFullscreen(true);
+        });
+        setIsFullscreen(true);
+      }
+    } else {
+      document.exitFullscreen().catch(err => {
+        console.log("Erro ao sair do fullscreen:", err);
+        setIsFullscreen(false);
+      });
       setIsFullscreen(false);
     }
-  }, [isOpen]);
-
-  const toggleFullscreen = () => {
-    setIsFullscreen(!isFullscreen);
   }
 
   const handleThumbnailClick = () => {
@@ -153,6 +126,32 @@ export function ProjectModal({ isOpen, onClose, project }: ProjectModalProps) {
       setShowVideo(true)
     }
   }
+
+  // Atualiza o estado quando o usuário sai da tela cheia usando Esc
+  const handleFullscreenChange = () => {
+    // Não atualizamos para iOS, pois já estamos lidando com isso manualmente
+    if (!iOSDevice) {
+      setIsFullscreen(!!document.fullscreenElement);
+    }
+  }
+
+  // Adiciona e remove o listener de evento de tela cheia
+  React.useEffect(() => {
+    document.addEventListener("fullscreenchange", handleFullscreenChange);
+    return () => {
+      document.removeEventListener("fullscreenchange", handleFullscreenChange);
+    }
+  }, [iOSDevice]);
+
+  // Adicione o estilo global para a animação
+  React.useEffect(() => {
+    const style = document.createElement('style')
+    style.textContent = fadeInAnimation
+    document.head.appendChild(style)
+    return () => {
+      document.head.removeChild(style)
+    }
+  }, [])
 
   // Reset slide direction after animation
   React.useEffect(() => {
@@ -164,19 +163,19 @@ export function ProjectModal({ isOpen, onClose, project }: ProjectModalProps) {
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className={`max-w-4xl overflow-y-auto bg-gradient-to-br from-background to-primary/5 ${
-        isFullscreen ? 'fixed inset-0 z-[9999] m-0 max-h-screen w-screen rounded-none p-0' : 'max-h-[90vh]'
-      }`}>
-        <DialogHeader className={isFullscreen ? 'hidden' : ''}>
-          <DialogTitle className="text-2xl font-bold">{project.title}</DialogTitle>
-        </DialogHeader>
+      <DialogContent className={`max-w-4xl ${isFullscreen && iOSDevice ? 'fixed inset-0 z-[9999] w-full h-full max-h-full m-0 p-0 rounded-none' : 'max-h-[90vh]'} overflow-y-auto bg-gradient-to-br from-background to-primary/5`}>
+        {!isFullscreen || !iOSDevice ? (
+          <DialogHeader>
+            <DialogTitle className="text-2xl font-bold">{project.title}</DialogTitle>
+          </DialogHeader>
+        ) : null}
         
-        <div className={`mt-8 ${isFullscreen ? 'm-0' : ''}`}>
+        <div className={`${isFullscreen && iOSDevice ? 'mt-0' : 'mt-8'}`}>
           {/* Galeria de Imagens */}
           <div 
             ref={imageContainerRef}
             className={`relative group aspect-video bg-black/10 rounded-lg overflow-hidden ${
-              isFullscreen ? 'fixed inset-0 z-[9999] bg-black' : ''
+              isFullscreen ? (iOSDevice ? 'fixed inset-0 z-[9999] bg-black w-full h-full' : 'fixed inset-0 z-[9999] bg-black') : ''
             }`}
             onTouchStart={handleTouchStart}
             onTouchMove={handleTouchMove}
@@ -210,7 +209,9 @@ export function ProjectModal({ isOpen, onClose, project }: ProjectModalProps) {
                     />
                     <div className="absolute inset-0 flex items-center justify-center bg-black/40">
                       <div className="w-20 h-20 rounded-full bg-white/10 backdrop-blur-sm flex items-center justify-center">
-                        <Play className="w-12 h-12 text-white" />
+                        <svg className="w-10 h-10 text-white" viewBox="0 0 24 24" fill="currentColor">
+                          <path d="M8 5v14l11-7z"/>
+                        </svg>
                       </div>
                     </div>
                   </div>
@@ -221,17 +222,23 @@ export function ProjectModal({ isOpen, onClose, project }: ProjectModalProps) {
                       ${isFullscreen ? 'w-full h-screen' : 'w-full h-full'}
                       transition-transform duration-500 ease-in-out
                     `}
-                    style={{ transform: `scale(${scale})` }}
                   >
                     <Image
+                      key={galleryIndex}
                       src={gallery[galleryIndex]}
-                      alt={`${project.title} - Imagem ${galleryIndex + 1}`}
+                      alt={`${project.title} - Imagem`}
                       fill
                       className={`
                         ${isFullscreen ? 'object-contain w-full h-full' : 'object-cover'} 
                         rounded-lg 
                         transition-all 
-                        ${slideDirection === 'left' ? 'animate-fadeIn' : slideDirection === 'right' ? 'animate-fadeIn' : ''}
+                        duration-500 
+                        ease-in-out
+                        animate-in 
+                        fade-in
+                        ${slideDirection === 'left' ? 'slide-in-from-right' : ''}
+                        ${slideDirection === 'right' ? 'slide-in-from-left' : ''}
+                        ${!slideDirection ? 'zoom-in-95' : ''}
                       `}
                       priority={true}
                       quality={100}
@@ -240,45 +247,70 @@ export function ProjectModal({ isOpen, onClose, project }: ProjectModalProps) {
                 )}
               </div>
             </div>
-
-            {/* Botões de Navegação */}
-            {gallery.length > 1 && !showVideo && !gallery[galleryIndex].includes('youtube.com/embed') && (
+            
+            {gallery.length > 1 && (
               <>
+                {/* Botões de navegação */}
                 <button
                   onClick={prevImage}
                   className="absolute left-2 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-black/50 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
-                  aria-label="Imagem anterior"
                 >
                   <ChevronLeft className="h-6 w-6" />
                 </button>
                 <button
                   onClick={nextImage}
                   className="absolute right-2 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-black/50 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
-                  aria-label="Próxima imagem"
                 >
                   <ChevronRight className="h-6 w-6" />
                 </button>
+
+                {/* Indicadores */}
+                <div className="absolute bottom-2 left-1/2 -translate-x-1/2 flex gap-1">
+                  {gallery.map((_, index) => (
+                    <div
+                      key={index}
+                      className={`w-2 h-2 rounded-full transition-all ${
+                        index === galleryIndex
+                          ? "bg-white w-4"
+                          : "bg-white/50"
+                      }`}
+                    />
+                  ))}
+                </div>
               </>
             )}
 
             {/* Botão de Tela Cheia */}
             {!showVideo && !gallery[galleryIndex].includes('youtube.com/embed') && (
-              <div className={`absolute bottom-4 right-4 flex gap-2 ${isFullscreen ? 'z-[9999]' : ''}`}>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="bg-black/50 hover:bg-black/75 backdrop-blur-sm text-white h-12 w-12"
+              <div className="absolute top-2 right-2">
+                <button
                   onClick={toggleFullscreen}
+                  className="w-10 h-10 rounded-full bg-black/50 text-white flex items-center justify-center opacity-70 md:opacity-0 md:group-hover:opacity-100 transition-opacity"
                 >
-                  {isFullscreen ? <Minimize2 className="h-6 w-6" /> : <Maximize2 className="h-6 w-6" />}
-                </Button>
+                  {isFullscreen ? (
+                    <Minimize2 className="h-5 w-5" />
+                  ) : (
+                    <Maximize2 className="h-5 w-5" />
+                  )}
+                </button>
+              </div>
+            )}
+            
+            {/* Botão de Fechar para iOS em modo fullscreen */}
+            {isFullscreen && iOSDevice && (
+              <div className="absolute top-2 left-2 z-[10000]">
+                <button
+                  onClick={() => setIsFullscreen(false)}
+                  className="w-10 h-10 rounded-full bg-black/50 text-white flex items-center justify-center"
+                >
+                  <X className="h-5 w-5" />
+                </button>
               </div>
             )}
           </div>
-          
-          {/* Descrição e outros detalhes */}
-          <div className={isFullscreen ? 'hidden' : ''}>
-            {/* Conteúdo em duas colunas */}
+
+          {/* Conteúdo em duas colunas - ocultar em iOS fullscreen */}
+          {(!isFullscreen || !iOSDevice) && (
             <div className="grid md:grid-cols-2 gap-8 mt-10">
               <div className="space-y-8">
                 <div>
@@ -352,7 +384,7 @@ export function ProjectModal({ isOpen, onClose, project }: ProjectModalProps) {
                 )}
               </div>
             </div>
-          </div>
+          )}
         </div>
       </DialogContent>
     </Dialog>
