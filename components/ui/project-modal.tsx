@@ -1,8 +1,8 @@
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { Github, ExternalLink, ChevronLeft, ChevronRight, ZoomIn, ZoomOut, Maximize2, Minimize2, X } from "lucide-react"
-import { useState, useRef, useEffect } from "react"
+import { Github, ExternalLink, ChevronLeft, ChevronRight, ZoomIn, ZoomOut, Maximize2, Minimize2 } from "lucide-react"
+import { useState, useRef } from "react"
 import React from "react"
 import Image from "next/image"
 
@@ -48,17 +48,10 @@ export function ProjectModal({ isOpen, onClose, project }: ProjectModalProps) {
   const [galleryIndex, setGalleryIndex] = useState(0)
   const [showVideo, setShowVideo] = useState(false)
   const [isFullscreen, setIsFullscreen] = useState(false)
-  const [iOSDevice, setIOSDevice] = useState(false)
   const [touchStart, setTouchStart] = useState<number | null>(null)
   const [slideDirection, setSlideDirection] = useState<'left' | 'right' | null>(null)
   const imageContainerRef = useRef<HTMLDivElement>(null)
   const gallery = project.gallery || [project.image]
-
-  // Detecta se é um dispositivo iOS
-  useEffect(() => {
-    const userAgent = window.navigator.userAgent.toLowerCase();
-    setIOSDevice(/iphone|ipad|ipod/.test(userAgent));
-  }, []);
 
   const nextImage = () => {
     setSlideDirection('left')
@@ -96,29 +89,8 @@ export function ProjectModal({ isOpen, onClose, project }: ProjectModalProps) {
   }
 
   const toggleFullscreen = () => {
-    // Para dispositivos iOS, usamos nossa própria implementação de fullscreen
-    if (iOSDevice) {
-      setIsFullscreen(!isFullscreen);
-      return;
-    }
-    
-    // Para outros dispositivos, usamos a API Fullscreen padrão
-    if (!document.fullscreenElement) {
-      if (imageContainerRef.current) {
-        imageContainerRef.current.requestFullscreen().catch(err => {
-          // Fallback para o nosso fullscreen simulado em caso de erro
-          console.log("Erro ao entrar em fullscreen:", err);
-          setIsFullscreen(true);
-        });
-        setIsFullscreen(true);
-      }
-    } else {
-      document.exitFullscreen().catch(err => {
-        console.log("Erro ao sair do fullscreen:", err);
-        setIsFullscreen(false);
-      });
-      setIsFullscreen(false);
-    }
+    // Simular fullscreen para compatibilidade com iOS
+    setIsFullscreen(!isFullscreen);
   }
 
   const handleThumbnailClick = () => {
@@ -127,22 +99,21 @@ export function ProjectModal({ isOpen, onClose, project }: ProjectModalProps) {
     }
   }
 
-  // Atualiza o estado quando o usuário sai da tela cheia usando Esc
-  const handleFullscreenChange = () => {
-    // Não atualizamos para iOS, pois já estamos lidando com isso manualmente
-    if (!iOSDevice) {
-      setIsFullscreen(!!document.fullscreenElement);
-    }
-  }
-
-  // Adiciona e remove o listener de evento de tela cheia
+  // Adicionado para fechar fullscreen ao pressionar ESC
   React.useEffect(() => {
-    document.addEventListener("fullscreenchange", handleFullscreenChange);
-    return () => {
-      document.removeEventListener("fullscreenchange", handleFullscreenChange);
+    const handleEscKey = (event: KeyboardEvent) => {
+      if (event.key === 'Escape' && isFullscreen) {
+        setIsFullscreen(false)
+      }
     }
-  }, [iOSDevice]);
+    
+    window.addEventListener('keydown', handleEscKey)
+    return () => {
+      window.removeEventListener('keydown', handleEscKey)
+    }
+  }, [isFullscreen])
 
+  // Remover ouvintes de evento nativo fullscreen (não é usado mais)
   // Adicione o estilo global para a animação
   React.useEffect(() => {
     const style = document.createElement('style')
@@ -161,50 +132,43 @@ export function ProjectModal({ isOpen, onClose, project }: ProjectModalProps) {
     return () => clearTimeout(timer)
   }, [galleryIndex])
 
-  // Bloquear scroll quando em fullscreen no iOS
-  React.useEffect(() => {
-    if (isFullscreen && iOSDevice) {
-      document.body.style.overflow = 'hidden';
-      document.body.style.position = 'fixed';
-      document.body.style.width = '100%';
-      document.body.style.height = '100%';
-    } else {
-      document.body.style.overflow = '';
-      document.body.style.position = '';
-      document.body.style.width = '';
-      document.body.style.height = '';
-    }
-    
-    return () => {
-      document.body.style.overflow = '';
-      document.body.style.position = '';
-      document.body.style.width = '';
-      document.body.style.height = '';
-    };
-  }, [isFullscreen, iOSDevice]);
-
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className={`max-w-4xl ${isFullscreen && iOSDevice ? 'fixed inset-0 z-[9999] w-full h-full max-h-full m-0 p-0 rounded-none' : 'max-h-[90vh]'} overflow-y-auto bg-gradient-to-br from-background to-primary/5`}>
-        {!isFullscreen || !iOSDevice ? (
+    <Dialog open={isOpen} onOpenChange={(open) => {
+      // Ao fechar o modal, certifique-se de que o fullscreen também é fechado
+      if (!open && isFullscreen) {
+        setIsFullscreen(false);
+      }
+      onClose();
+    }}>
+      <DialogContent className={`max-w-4xl max-h-[90vh] overflow-y-auto bg-gradient-to-br from-background to-primary/5 ${isFullscreen ? 'p-0 max-w-full max-h-full h-screen m-0 rounded-none' : ''}`}>
+        {isFullscreen ? (
+          <div className="absolute top-4 right-4 z-[9999]">
+            <button
+              onClick={toggleFullscreen}
+              className="w-10 h-10 rounded-full bg-black/50 text-white flex items-center justify-center"
+            >
+              <Minimize2 className="h-5 w-5" />
+            </button>
+          </div>
+        ) : (
           <DialogHeader>
             <DialogTitle className="text-2xl font-bold">{project.title}</DialogTitle>
           </DialogHeader>
-        ) : null}
+        )}
         
-        <div className={`${isFullscreen && iOSDevice ? 'mt-0' : 'mt-8'}`}>
+        <div className={`${isFullscreen ? 'mt-0 h-full' : 'mt-8'}`}>
           {/* Galeria de Imagens */}
           <div 
             ref={imageContainerRef}
-            className={`relative group aspect-video bg-black/10 rounded-lg overflow-hidden ${
-              isFullscreen ? (iOSDevice ? 'fixed inset-0 z-[9999] bg-black w-screen h-screen m-0 p-0' : 'fixed inset-0 z-[9999] bg-black') : ''
+            className={`relative group bg-black/10 rounded-lg overflow-hidden ${
+              isFullscreen ? 'fixed inset-0 z-[9999] bg-black h-full flex items-center justify-center' : 'aspect-video'
             }`}
             onTouchStart={handleTouchStart}
             onTouchMove={handleTouchMove}
             onTouchEnd={handleTouchEnd}
           >
-            <div className={`${isFullscreen ? 'absolute inset-0 flex items-center justify-center' : 'relative w-full h-full'}`}>
-              <div className={`${isFullscreen ? 'w-full h-full flex items-center justify-center' : 'relative aspect-video mb-6'}`}>
+            <div className={`relative ${isFullscreen ? 'w-full h-screen flex items-center justify-center' : 'w-full h-full'}`}>
+              <div className={`relative ${isFullscreen ? 'w-full h-full' : 'aspect-video mb-6'}`}>
                 {showVideo ? (
                   <iframe
                     src={`https://www.youtube.com/embed/${project.youtubeId}?rel=0`}
@@ -241,7 +205,7 @@ export function ProjectModal({ isOpen, onClose, project }: ProjectModalProps) {
                   <div 
                     className={`
                       relative 
-                      ${isFullscreen ? 'w-full h-full flex items-center justify-center' : 'w-full h-full'}
+                      ${isFullscreen ? 'w-full h-screen' : 'w-full h-full'}
                       transition-transform duration-500 ease-in-out
                     `}
                   >
@@ -251,7 +215,7 @@ export function ProjectModal({ isOpen, onClose, project }: ProjectModalProps) {
                       alt={`${project.title} - Imagem`}
                       fill
                       className={`
-                        ${isFullscreen ? 'object-contain !relative !w-auto !h-auto !inset-auto max-w-full max-h-full' : 'object-cover'} 
+                        ${isFullscreen ? 'object-contain w-full h-full' : 'object-cover'} 
                         rounded-lg 
                         transition-all 
                         duration-500 
@@ -264,7 +228,6 @@ export function ProjectModal({ isOpen, onClose, project }: ProjectModalProps) {
                       `}
                       priority={true}
                       quality={100}
-                      style={isFullscreen ? { position: 'relative', width: 'auto', height: 'auto', maxWidth: '100%', maxHeight: '100%' } : {}}
                     />
                   </div>
                 )}
@@ -302,38 +265,22 @@ export function ProjectModal({ isOpen, onClose, project }: ProjectModalProps) {
                 </div>
               </>
             )}
-
-            {/* Botão de Tela Cheia */}
-            {!showVideo && !gallery[galleryIndex].includes('youtube.com/embed') && (
-              <div className="absolute top-4 right-4">
+            
+            {/* Botão de Tela Cheia (apenas na visualização normal) */}
+            {!isFullscreen && !showVideo && !gallery[galleryIndex].includes('youtube.com/embed') && (
+              <div className="absolute top-2 right-2">
                 <button
                   onClick={toggleFullscreen}
-                  className="w-12 h-12 rounded-full bg-black/70 text-white flex items-center justify-center opacity-90 transition-opacity"
+                  className="w-10 h-10 rounded-full bg-black/50 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
                 >
-                  {isFullscreen ? (
-                    <Minimize2 className="h-6 w-6" />
-                  ) : (
-                    <Maximize2 className="h-6 w-6" />
-                  )}
-                </button>
-              </div>
-            )}
-            
-            {/* Botão de Fechar para iOS em modo fullscreen */}
-            {isFullscreen && iOSDevice && (
-              <div className="absolute top-4 left-4 z-[10000]">
-                <button
-                  onClick={() => setIsFullscreen(false)}
-                  className="w-12 h-12 rounded-full bg-black/70 text-white flex items-center justify-center"
-                >
-                  <X className="h-7 w-7" />
+                  <Maximize2 className="h-5 w-5" />
                 </button>
               </div>
             )}
           </div>
 
-          {/* Conteúdo em duas colunas - ocultar em iOS fullscreen */}
-          {(!isFullscreen || !iOSDevice) && (
+          {/* Conteúdo em duas colunas - oculto quando em fullscreen */}
+          {!isFullscreen && (
             <div className="grid md:grid-cols-2 gap-8 mt-10">
               <div className="space-y-8">
                 <div>
