@@ -128,6 +128,13 @@ export function ProjectModal({ isOpen, onClose, project }: ProjectModalProps) {
       document.body.classList.add('ios-fullscreen-active');
     } else {
       document.body.classList.remove('ios-fullscreen-active');
+      // Forçar saída do fullscreen no iOS
+      setTimeout(() => {
+        document.documentElement.style.overflow = '';
+        document.body.style.overflow = '';
+        document.documentElement.style.backgroundColor = '';
+        document.body.style.backgroundColor = '';
+      }, 50);
     }
   }
 
@@ -160,19 +167,41 @@ export function ProjectModal({ isOpen, onClose, project }: ProjectModalProps) {
       // Força background preto para todo o documento
       document.documentElement.style.backgroundColor = '#000000';
       document.body.style.backgroundColor = '#000000';
+      
+      // Adicionar um evento de toque para iOS
+      const handleTouchEndOnBody = (e: TouchEvent) => {
+        if (isFullscreen) {
+          // Verifica se o toque foi no botão de sair
+          const exitButton = document.querySelector('.exit-fullscreen-button');
+          if (exitButton && exitButton.contains(e.target as Node)) {
+            e.preventDefault();
+            toggleFullscreen();
+          }
+        }
+      };
+      
+      document.body.addEventListener('touchend', handleTouchEndOnBody);
+      
+      return () => {
+        document.body.removeEventListener('touchend', handleTouchEndOnBody);
+        document.documentElement.style.overflow = '';
+        document.body.style.overflow = '';
+        document.documentElement.style.backgroundColor = '';
+        document.body.style.backgroundColor = '';
+      };
     } else {
       document.documentElement.style.overflow = '';
       document.body.style.overflow = '';
       document.documentElement.style.backgroundColor = '';
       document.body.style.backgroundColor = '';
+      
+      return () => {
+        document.documentElement.style.overflow = '';
+        document.body.style.overflow = '';
+        document.documentElement.style.backgroundColor = '';
+        document.body.style.backgroundColor = '';
+      };
     }
-
-    return () => {
-      document.documentElement.style.overflow = '';
-      document.body.style.overflow = '';
-      document.documentElement.style.backgroundColor = '';
-      document.body.style.backgroundColor = '';
-    };
   }, [isFullscreen]);
 
   // Adicione o estilo global para a animação e fix para iOS
@@ -211,17 +240,34 @@ export function ProjectModal({ isOpen, onClose, project }: ProjectModalProps) {
     }}>
       <DialogContent className={`
         ${isFullscreen 
-          ? 'p-0 !max-w-none !max-h-none !w-full !h-screen !m-0 !rounded-none !inset-0 !top-0 !left-0 !translate-x-0 !translate-y-0 !border-0 fixed ios-fullscreen-fix bg-black' 
+          ? 'p-0 !max-w-none !max-h-none !w-full !h-screen !m-0 !rounded-none !inset-0 !top-0 !left-0 !translate-x-0 !translate-y-0 !border-0 fixed ios-fullscreen-fix bg-black [&_[data-dialog-close]]:hidden' 
           : 'max-w-4xl max-h-[90vh]'
         } overflow-y-auto bg-gradient-to-br from-background to-primary/5`}>
         {isFullscreen ? (
           <div className="absolute top-6 right-6 z-[9999]">
             <button
               onClick={toggleFullscreen}
-              className="w-16 h-16 rounded-full bg-black/80 text-white flex items-center justify-center border-2 border-white/40 shadow-lg active:scale-95 transition-transform touch-manipulation"
-              style={{ WebkitTapHighlightColor: 'transparent' }}
+              onTouchEnd={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                toggleFullscreen();
+              }}
+              onTouchStart={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+              }}
+              className="w-20 h-20 rounded-full bg-black/80 text-white flex items-center justify-center border-2 border-white/40 shadow-lg active:scale-95 transition-transform touch-manipulation exit-fullscreen-button"
+              style={{ 
+                WebkitTapHighlightColor: 'transparent',
+                WebkitAppearance: 'none',
+                WebkitUserSelect: 'none',
+                touchAction: 'manipulation'
+              }}
+              aria-label="Sair da tela cheia"
             >
-              <Minimize2 className="h-8 w-8" />
+              <div className="flex items-center justify-center w-full h-full">
+                <Minimize2 className="h-10 w-10" />
+              </div>
               <span className="sr-only">Sair da tela cheia</span>
             </button>
           </div>
