@@ -161,6 +161,28 @@ export function ProjectModal({ isOpen, onClose, project }: ProjectModalProps) {
     return () => clearTimeout(timer)
   }, [galleryIndex])
 
+  // Bloquear scroll quando em fullscreen no iOS
+  React.useEffect(() => {
+    if (isFullscreen && iOSDevice) {
+      document.body.style.overflow = 'hidden';
+      document.body.style.position = 'fixed';
+      document.body.style.width = '100%';
+      document.body.style.height = '100%';
+    } else {
+      document.body.style.overflow = '';
+      document.body.style.position = '';
+      document.body.style.width = '';
+      document.body.style.height = '';
+    }
+    
+    return () => {
+      document.body.style.overflow = '';
+      document.body.style.position = '';
+      document.body.style.width = '';
+      document.body.style.height = '';
+    };
+  }, [isFullscreen, iOSDevice]);
+
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className={`max-w-4xl ${isFullscreen && iOSDevice ? 'fixed inset-0 z-[9999] w-full h-full max-h-full m-0 p-0 rounded-none' : 'max-h-[90vh]'} overflow-y-auto bg-gradient-to-br from-background to-primary/5`}>
@@ -175,14 +197,14 @@ export function ProjectModal({ isOpen, onClose, project }: ProjectModalProps) {
           <div 
             ref={imageContainerRef}
             className={`relative group aspect-video bg-black/10 rounded-lg overflow-hidden ${
-              isFullscreen ? (iOSDevice ? 'fixed inset-0 z-[9999] bg-black w-full h-full' : 'fixed inset-0 z-[9999] bg-black') : ''
+              isFullscreen ? (iOSDevice ? 'fixed inset-0 z-[9999] bg-black w-screen h-screen m-0 p-0' : 'fixed inset-0 z-[9999] bg-black') : ''
             }`}
             onTouchStart={handleTouchStart}
             onTouchMove={handleTouchMove}
             onTouchEnd={handleTouchEnd}
           >
-            <div className={`relative ${isFullscreen ? 'w-full h-screen flex items-center justify-center' : 'w-full h-full'}`}>
-              <div className={`relative ${isFullscreen ? 'w-full h-full' : 'aspect-video mb-6'}`}>
+            <div className={`${isFullscreen ? 'absolute inset-0 flex items-center justify-center' : 'relative w-full h-full'}`}>
+              <div className={`${isFullscreen ? 'w-full h-full flex items-center justify-center' : 'relative aspect-video mb-6'}`}>
                 {showVideo ? (
                   <iframe
                     src={`https://www.youtube.com/embed/${project.youtubeId}?rel=0`}
@@ -219,7 +241,7 @@ export function ProjectModal({ isOpen, onClose, project }: ProjectModalProps) {
                   <div 
                     className={`
                       relative 
-                      ${isFullscreen ? 'w-full h-screen' : 'w-full h-full'}
+                      ${isFullscreen ? 'w-full h-full flex items-center justify-center' : 'w-full h-full'}
                       transition-transform duration-500 ease-in-out
                     `}
                   >
@@ -229,7 +251,7 @@ export function ProjectModal({ isOpen, onClose, project }: ProjectModalProps) {
                       alt={`${project.title} - Imagem`}
                       fill
                       className={`
-                        ${isFullscreen ? 'object-contain w-full h-full' : 'object-cover'} 
+                        ${isFullscreen ? 'object-contain !relative !w-auto !h-auto !inset-auto max-w-full max-h-full' : 'object-cover'} 
                         rounded-lg 
                         transition-all 
                         duration-500 
@@ -242,6 +264,7 @@ export function ProjectModal({ isOpen, onClose, project }: ProjectModalProps) {
                       `}
                       priority={true}
                       quality={100}
+                      style={isFullscreen ? { position: 'relative', width: 'auto', height: 'auto', maxWidth: '100%', maxHeight: '100%' } : {}}
                     />
                   </div>
                 )}
@@ -282,15 +305,15 @@ export function ProjectModal({ isOpen, onClose, project }: ProjectModalProps) {
 
             {/* Botão de Tela Cheia */}
             {!showVideo && !gallery[galleryIndex].includes('youtube.com/embed') && (
-              <div className="absolute top-2 right-2">
+              <div className="absolute top-4 right-4">
                 <button
                   onClick={toggleFullscreen}
-                  className="w-10 h-10 rounded-full bg-black/50 text-white flex items-center justify-center opacity-70 md:opacity-0 md:group-hover:opacity-100 transition-opacity"
+                  className="w-12 h-12 rounded-full bg-black/70 text-white flex items-center justify-center opacity-90 transition-opacity"
                 >
                   {isFullscreen ? (
-                    <Minimize2 className="h-5 w-5" />
+                    <Minimize2 className="h-6 w-6" />
                   ) : (
-                    <Maximize2 className="h-5 w-5" />
+                    <Maximize2 className="h-6 w-6" />
                   )}
                 </button>
               </div>
@@ -298,12 +321,12 @@ export function ProjectModal({ isOpen, onClose, project }: ProjectModalProps) {
             
             {/* Botão de Fechar para iOS em modo fullscreen */}
             {isFullscreen && iOSDevice && (
-              <div className="absolute top-2 left-2 z-[10000]">
+              <div className="absolute top-4 left-4 z-[10000]">
                 <button
                   onClick={() => setIsFullscreen(false)}
-                  className="w-10 h-10 rounded-full bg-black/50 text-white flex items-center justify-center"
+                  className="w-12 h-12 rounded-full bg-black/70 text-white flex items-center justify-center"
                 >
-                  <X className="h-5 w-5" />
+                  <X className="h-7 w-7" />
                 </button>
               </div>
             )}
