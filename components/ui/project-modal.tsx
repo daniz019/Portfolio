@@ -1,12 +1,10 @@
-import { Dialog, DialogContent as RadixDialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
-import * as DialogPrimitive from "@radix-ui/react-dialog"
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Github, ExternalLink, ChevronLeft, ChevronRight, ZoomIn, ZoomOut, Maximize2, Minimize2, X } from "lucide-react"
 import { useState, useRef } from "react"
 import React from "react"
 import Image from "next/image"
-import { cn } from "@/lib/utils"
 
 type Project = {
   id: string
@@ -46,80 +44,22 @@ const fadeInAnimation = `
   }
 `
 
-// Estilo específico para iOS em fullscreen
-const iOSFullscreenFix = `
-  /* Fix para iOS */
-  @supports (-webkit-touch-callout: none) {
-    .ios-fullscreen-fix {
-      position: fixed !important;
-      top: 0 !important;
-      left: 0 !important;
-      right: 0 !important;
-      bottom: 0 !important;
-      width: 100% !important;
-      height: 100% !important;
-      max-width: none !important;
-      max-height: none !important;
-      margin: 0 !important;
-      padding: 0 !important;
-      transform: none !important;
-      border-radius: 0 !important;
-      z-index: 9999 !important;
-      background-color: #000000 !important;
-    }
-    
-    /* Fix para o fundo em tela cheia iOS */
-    body.ios-fullscreen-active {
-      background-color: #000000 !important;
-      overflow: hidden !important;
-    }
-  }
-  
-  /* Esconder botão X quando em fullscreen */
-  [data-state="open"] .ios-fullscreen-fix button[aria-label="Close"] {
-    display: none !important;
-  }
-  
-  .ios-fullscreen-fix button[aria-label="Close"] {
-    display: none !important;
-  }
-`
-
-// Componente personalizado que estende o DialogContent original para não exibir o botão de fechar quando em fullscreen
-const DialogContent = React.forwardRef<
-  React.ElementRef<typeof DialogPrimitive.Content>,
-  React.ComponentPropsWithoutRef<typeof DialogPrimitive.Content> & { isFullscreen?: boolean }
->(({ className, children, isFullscreen, ...props }, ref) => (
-  <DialogPrimitive.Portal>
-    <DialogPrimitive.Overlay className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0" />
-    <DialogPrimitive.Content
-      ref={ref}
-      className={cn(
-        "fixed left-[50%] top-[50%] z-50 grid w-full max-w-lg translate-x-[-50%] translate-y-[-50%] gap-4 border bg-background p-6 shadow-lg duration-200 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[state=closed]:slide-out-to-left-1/2 data-[state=closed]:slide-out-to-top-[48%] data-[state=open]:slide-in-from-left-1/2 data-[state=open]:slide-in-from-top-[48%] sm:rounded-lg",
-        className
-      )}
-      {...props}
-    >
-      {children}
-      {!isFullscreen && (
-        <DialogPrimitive.Close className="absolute right-4 top-4 rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none data-[state=open]:bg-accent data-[state=open]:text-muted-foreground p-2 md:p-2">
-          <X className="h-6 w-6 md:h-4 md:w-4" />
-          <span className="sr-only">Close</span>
-        </DialogPrimitive.Close>
-      )}
-    </DialogPrimitive.Content>
-  </DialogPrimitive.Portal>
-));
-DialogContent.displayName = "CustomDialogContent";
-
 export function ProjectModal({ isOpen, onClose, project }: ProjectModalProps) {
   const [galleryIndex, setGalleryIndex] = useState(0)
   const [showVideo, setShowVideo] = useState(false)
   const [isFullscreen, setIsFullscreen] = useState(false)
   const [touchStart, setTouchStart] = useState<number | null>(null)
   const [slideDirection, setSlideDirection] = useState<'left' | 'right' | null>(null)
+  const [isIOS, setIsIOS] = useState(false)
   const imageContainerRef = useRef<HTMLDivElement>(null)
   const gallery = project.gallery || [project.image]
+
+  // Detectar iOS quando o componente é montado
+  React.useEffect(() => {
+    const userAgent = window.navigator.userAgent.toLowerCase();
+    const isIOSDevice = /iphone|ipad|ipod|macintosh/.test(userAgent) && 'ontouchend' in document;
+    setIsIOS(isIOSDevice);
+  }, []);
 
   const nextImage = () => {
     setSlideDirection('left')
@@ -157,35 +97,20 @@ export function ProjectModal({ isOpen, onClose, project }: ProjectModalProps) {
   }
 
   const toggleFullscreen = () => {
-    // Simular fullscreen para compatibilidade com iOS
-    const newFullscreenState = !isFullscreen;
-    
-    // Primeiro atualizamos o estado
-    setIsFullscreen(newFullscreenState);
-    
-    // Depois aplicamos todas as mudanças necessárias
-    if (newFullscreenState) {
-      // Entrando em tela cheia
-      document.body.classList.add('ios-fullscreen-active');
-      document.documentElement.style.overflow = 'hidden';
-      document.body.style.overflow = 'hidden';
-      document.documentElement.style.backgroundColor = '#000000';
-      document.body.style.backgroundColor = '#000000';
-      
-      // Força o foco no botão para garantir que ele seja clicável
-      if (imageContainerRef.current) {
-        const fullscreenButton = imageContainerRef.current.querySelector('button');
-        if (fullscreenButton) {
-          fullscreenButton.focus();
-        }
-      }
+    if (isIOS) {
+      // Solução alternativa para iOS - apenas alternar o estado
+      setIsFullscreen(!isFullscreen);
     } else {
-      // Saindo da tela cheia
-      document.body.classList.remove('ios-fullscreen-active');
-      document.documentElement.style.overflow = '';
-      document.body.style.overflow = '';
-      document.documentElement.style.backgroundColor = '';
-      document.body.style.backgroundColor = '';
+      // Solução padrão para outros dispositivos
+      if (!document.fullscreenElement) {
+        if (imageContainerRef.current) {
+          imageContainerRef.current.requestFullscreen()
+          setIsFullscreen(true)
+        }
+      } else {
+        document.exitFullscreen()
+        setIsFullscreen(false)
+      }
     }
   }
 
@@ -195,48 +120,28 @@ export function ProjectModal({ isOpen, onClose, project }: ProjectModalProps) {
     }
   }
 
-  // Adicionado para fechar fullscreen ao pressionar ESC
-  React.useEffect(() => {
-    const handleEscKey = (event: KeyboardEvent) => {
-      if (event.key === 'Escape' && isFullscreen) {
-        toggleFullscreen(); // Usar a função toggleFullscreen em vez de apenas mudar o estado
-      }
+  // Atualiza o estado quando o usuário sai da tela cheia usando Esc
+  const handleFullscreenChange = () => {
+    if (!isIOS) {
+      setIsFullscreen(!!document.fullscreenElement)
     }
-    
-    window.addEventListener('keydown', handleEscKey)
-    return () => {
-      window.removeEventListener('keydown', handleEscKey)
-    }
-  }, [isFullscreen])
+  }
 
-  // Prevenir scroll e garantir fundo preto quando em tela cheia no iOS
+  // Adiciona e remove o listener de evento de tela cheia
   React.useEffect(() => {
-    // Essa parte foi movida para dentro da função toggleFullscreen
+    document.addEventListener("fullscreenchange", handleFullscreenChange)
     return () => {
-      // Cleanup ao desmontar
-      document.documentElement.style.overflow = '';
-      document.body.style.overflow = '';
-      document.documentElement.style.backgroundColor = '';
-      document.body.style.backgroundColor = '';
-      document.body.classList.remove('ios-fullscreen-active');
-    };
-  }, []);
+      document.removeEventListener("fullscreenchange", handleFullscreenChange)
+    }
+  }, [])
 
-  // Adicione o estilo global para a animação e fix para iOS
+  // Adicione o estilo global para a animação
   React.useEffect(() => {
     const style = document.createElement('style')
-    style.textContent = fadeInAnimation + iOSFullscreenFix + `
-      /* Esconder botão de fechar quando em fullscreen */
-      .fullscreen-active [data-ui-dialog-close] {
-        display: none !important;
-      }
-    `
+    style.textContent = fadeInAnimation
     document.head.appendChild(style)
-    
-    // Limpeza ao desmontar o componente
     return () => {
       document.head.removeChild(style)
-      document.body.classList.remove('ios-fullscreen-active');
     }
   }, [])
 
@@ -249,65 +154,25 @@ export function ProjectModal({ isOpen, onClose, project }: ProjectModalProps) {
   }, [galleryIndex])
 
   return (
-    <Dialog open={isOpen} onOpenChange={(open) => {
-      if (!open) {
-        // Primeiro saímos da tela cheia se estiver ativa
-        if (isFullscreen) {
-          setIsFullscreen(false);
-          document.body.classList.remove('ios-fullscreen-active');
-          document.documentElement.style.overflow = '';
-          document.body.style.overflow = '';
-          document.documentElement.style.backgroundColor = '';
-          document.body.style.backgroundColor = '';
-        }
-        // Depois fechamos o modal
-        onClose();
-      }
-    }}>
-      <DialogContent 
-        isFullscreen={isFullscreen}
-        className={`
-          ${isFullscreen 
-            ? 'p-0 !max-w-none !max-h-none !w-full !h-screen !m-0 !rounded-none !inset-0 !top-0 !left-0 !translate-x-0 !translate-y-0 !border-0 fixed ios-fullscreen-fix bg-black' 
-            : 'max-w-4xl max-h-[90vh]'
-          } overflow-y-auto bg-gradient-to-br from-background to-primary/5`}
-      >
-        {!isFullscreen && (
-          <div className="mb-6">
-            <h2 className="text-2xl font-bold">{project.title}</h2>
-          </div>
-        )}
+    <Dialog open={isOpen} onOpenChange={onClose}>
+      <DialogContent className={`max-w-4xl max-h-[90vh] overflow-y-auto bg-gradient-to-br from-background to-primary/5 ${isFullscreen && isIOS ? 'fixed inset-0 z-[9999] max-w-none max-h-none w-screen h-screen' : ''}`}>
+        <DialogHeader className={`${isFullscreen && isIOS ? 'hidden' : ''}`}>
+          <DialogTitle className="text-2xl font-bold">{project.title}</DialogTitle>
+        </DialogHeader>
         
-        <div className={`${isFullscreen ? 'mt-0 h-full' : 'mt-8'}`}>
+        <div className={`${isFullscreen && isIOS ? 'mt-0' : 'mt-8'}`}>
           {/* Galeria de Imagens */}
           <div 
             ref={imageContainerRef}
-            className={`relative group bg-black/10 rounded-lg overflow-hidden ${
-              isFullscreen ? 'fixed inset-0 z-[9999] bg-black h-full w-full flex items-center justify-center' : 'aspect-video'
+            className={`relative group aspect-video bg-black/10 rounded-lg overflow-hidden ${
+              isFullscreen ? 'fixed inset-0 z-[9999] bg-black' : ''
             }`}
             onTouchStart={handleTouchStart}
             onTouchMove={handleTouchMove}
             onTouchEnd={handleTouchEnd}
           >
-            <div className={`absolute top-6 right-6 z-[9999] ${isFullscreen ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'} transition-opacity`}>
-              <button
-                onClick={toggleFullscreen}
-                className="w-14 h-14 rounded-full bg-black/80 text-white flex items-center justify-center border border-white/40 shadow-lg active:scale-95 transition-transform touch-manipulation"
-                style={{ WebkitTapHighlightColor: 'transparent' }}
-              >
-                {isFullscreen ? (
-                  <Minimize2 className="h-7 w-7" />
-                ) : (
-                  <Maximize2 className="h-6 w-6" />
-                )}
-                <span className="sr-only">
-                  {isFullscreen ? 'Sair da tela cheia' : 'Entrar em tela cheia'}
-                </span>
-              </button>
-            </div>
-
-            <div className={`relative ${isFullscreen ? 'w-full h-full flex items-center justify-center' : 'w-full h-full'}`}>
-              <div className={`relative ${isFullscreen ? 'w-full h-full flex items-center justify-center' : 'aspect-video mb-6'}`}>
+            <div className={`relative ${isFullscreen ? 'w-full h-screen flex items-center justify-center' : 'w-full h-full'}`}>
+              <div className={`relative ${isFullscreen ? 'w-full h-full' : 'aspect-video mb-6'}`}>
                 {showVideo ? (
                   <iframe
                     src={`https://www.youtube.com/embed/${project.youtubeId}?rel=0`}
@@ -344,10 +209,9 @@ export function ProjectModal({ isOpen, onClose, project }: ProjectModalProps) {
                   <div 
                     className={`
                       relative 
-                      ${isFullscreen ? 'w-full h-full' : 'w-full h-full'}
+                      ${isFullscreen ? 'w-full h-screen' : 'w-full h-full'}
                       transition-transform duration-500 ease-in-out
                     `}
-                    style={isFullscreen ? { width: '100vw', height: '100vh' } : {}}
                   >
                     <Image
                       key={galleryIndex}
@@ -355,7 +219,7 @@ export function ProjectModal({ isOpen, onClose, project }: ProjectModalProps) {
                       alt={`${project.title} - Imagem`}
                       fill
                       className={`
-                        ${isFullscreen ? 'object-contain !w-full !h-full' : 'object-cover'} 
+                        ${isFullscreen ? 'object-contain w-full h-full' : 'object-cover'} 
                         rounded-lg 
                         transition-all 
                         duration-500 
@@ -368,17 +232,6 @@ export function ProjectModal({ isOpen, onClose, project }: ProjectModalProps) {
                       `}
                       priority={true}
                       quality={100}
-                      sizes={isFullscreen ? "100vw" : "50vw"}
-                      style={isFullscreen ? { 
-                        objectFit: 'contain', 
-                        width: '100%', 
-                        height: '100%',
-                        position: 'absolute',
-                        top: 0,
-                        left: 0,
-                        right: 0,
-                        bottom: 0
-                      } : {}}
                     />
                   </div>
                 )}
@@ -390,13 +243,13 @@ export function ProjectModal({ isOpen, onClose, project }: ProjectModalProps) {
                 {/* Botões de navegação */}
                 <button
                   onClick={prevImage}
-                  className="absolute left-2 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-black/50 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                  className="absolute left-2 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-black/50 text-white flex items-center justify-center md:opacity-0 md:group-hover:opacity-100 opacity-100 transition-opacity"
                 >
                   <ChevronLeft className="h-6 w-6" />
                 </button>
                 <button
                   onClick={nextImage}
-                  className="absolute right-2 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-black/50 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                  className="absolute right-2 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-black/50 text-white flex items-center justify-center md:opacity-0 md:group-hover:opacity-100 opacity-100 transition-opacity"
                 >
                   <ChevronRight className="h-6 w-6" />
                 </button>
@@ -416,84 +269,107 @@ export function ProjectModal({ isOpen, onClose, project }: ProjectModalProps) {
                 </div>
               </>
             )}
+
+            {!showVideo && !gallery[galleryIndex].includes('youtube.com/embed') && (
+              <div className="absolute top-2 right-2">
+                <button
+                  onClick={toggleFullscreen}
+                  className="w-10 h-10 rounded-full bg-black/50 text-white flex items-center justify-center md:opacity-0 md:group-hover:opacity-100 opacity-100 transition-opacity"
+                >
+                  {isFullscreen ? (
+                    <Minimize2 className="h-5 w-5" />
+                  ) : (
+                    <Maximize2 className="h-5 w-5" />
+                  )}
+                </button>
+              </div>
+            )}
+            
+            {/* Botão para fechar tela cheia no iOS */}
+            {isFullscreen && isIOS && (
+              <button
+                onClick={toggleFullscreen}
+                className="absolute top-4 right-4 z-[9999] w-12 h-12 rounded-full bg-black/70 text-white flex items-center justify-center shadow-lg"
+              >
+                <X className="h-8 w-8" />
+              </button>
+            )}
           </div>
 
-          {/* Conteúdo em duas colunas - oculto quando em fullscreen */}
-          {!isFullscreen && (
-            <div className="grid md:grid-cols-2 gap-8 mt-10">
-              <div className="space-y-8">
-                <div>
-                  <h3 className="text-lg font-semibold mb-3 flex items-center gap-2">
-                    <Badge variant="outline" className="bg-primary/10 text-primary border-primary/20">
-                      Descrição
-                    </Badge>
-                  </h3>
-                  <p className="text-muted-foreground">{project.description}</p>
-                </div>
-
-                <div>
-                  <h3 className="text-lg font-semibold mb-3 flex items-center gap-2">
-                    <Badge variant="outline" className="bg-secondary/10 text-secondary border-secondary/20">
-                      Desafio
-                    </Badge>
-                  </h3>
-                  <p className="text-muted-foreground">{project.challenge}</p>
-                </div>
-
-                <div>
-                  <h3 className="text-lg font-semibold mb-3 flex items-center gap-2">
-                    <Badge variant="outline" className="bg-accent/10 text-accent border-accent/20">
-                      Solução
-                    </Badge>
-                  </h3>
-                  <p className="text-muted-foreground">{project.solution}</p>
-                </div>
+          {/* Conteúdo em duas colunas */}
+          <div className={`grid md:grid-cols-2 gap-8 mt-10 ${isFullscreen && isIOS ? 'hidden' : ''}`}>
+            <div className="space-y-8">
+              <div>
+                <h3 className="text-lg font-semibold mb-3 flex items-center gap-2">
+                  <Badge variant="outline" className="bg-primary/10 text-primary border-primary/20">
+                    Descrição
+                  </Badge>
+                </h3>
+                <p className="text-muted-foreground">{project.description}</p>
               </div>
 
-              <div className="space-y-8">
-                <div>
-                  <h3 className="text-lg font-semibold mb-3">Tecnologias</h3>
-                  <div className="flex flex-wrap gap-2">
-                    {project.technologies.map((tech) => (
-                      <Badge
-                        key={tech}
-                        variant="outline"
-                        className="bg-background/50 border-primary/20"
-                      >
-                        {tech}
-                      </Badge>
-                    ))}
-                  </div>
-                </div>
+              <div>
+                <h3 className="text-lg font-semibold mb-3 flex items-center gap-2">
+                  <Badge variant="outline" className="bg-secondary/10 text-secondary border-secondary/20">
+                    Desafio
+                  </Badge>
+                </h3>
+                <p className="text-muted-foreground">{project.challenge}</p>
+              </div>
 
-                {(project.github || project.link) && (
-                  <div>
-                    <h3 className="text-lg font-semibold mb-3">Links</h3>
-                    <div className="flex flex-col gap-3">
-                      {project.github && (
-                        <Button
-                          className="w-full bg-gradient-to-r from-primary to-secondary hover:opacity-90 transition-opacity"
-                          onClick={() => window.open(project.github, "_blank")}
-                        >
-                          <Github className="mr-2 h-4 w-4" />
-                          Ver Código
-                        </Button>
-                      )}
-                      {project.link && (
-                        <Button
-                          className="w-full bg-gradient-to-r from-secondary to-accent hover:opacity-90 transition-opacity"
-                          onClick={() => window.open(project.link, "_blank")}
-                        >
-                          <ExternalLink className="mr-2 h-4 w-4" />
-                          Ver Demo
-                        </Button>
-                      )}
-                    </div>
-                  </div>
-                )}
+              <div>
+                <h3 className="text-lg font-semibold mb-3 flex items-center gap-2">
+                  <Badge variant="outline" className="bg-accent/10 text-accent border-accent/20">
+                    Solução
+                  </Badge>
+                </h3>
+                <p className="text-muted-foreground">{project.solution}</p>
               </div>
             </div>
-          )}
+
+            <div className="space-y-8">
+              <div>
+                <h3 className="text-lg font-semibold mb-3">Tecnologias</h3>
+                <div className="flex flex-wrap gap-2">
+                  {project.technologies.map((tech) => (
+                    <Badge
+                      key={tech}
+                      variant="outline"
+                      className="bg-background/50 border-primary/20"
+                    >
+                      {tech}
+                    </Badge>
+                  ))}
+                </div>
+              </div>
+
+              {(project.github || project.link) && (
+                <div>
+                  <h3 className="text-lg font-semibold mb-3">Links</h3>
+                  <div className="flex flex-col gap-3">
+                    {project.github && (
+                      <Button
+                        className="w-full bg-gradient-to-r from-primary to-secondary hover:opacity-90 transition-opacity"
+                        onClick={() => window.open(project.github, "_blank")}
+                      >
+                        <Github className="mr-2 h-4 w-4" />
+                        Ver Código
+                      </Button>
+                    )}
+                    {project.link && (
+                      <Button
+                        className="w-full bg-gradient-to-r from-secondary to-accent hover:opacity-90 transition-opacity"
+                        onClick={() => window.open(project.link, "_blank")}
+                      >
+                        <ExternalLink className="mr-2 h-4 w-4" />
+                        Ver Demo
+                      </Button>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
         </div>
       </DialogContent>
     </Dialog>
