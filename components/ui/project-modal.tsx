@@ -1,7 +1,7 @@
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { Github, ExternalLink, ChevronLeft, ChevronRight, ZoomIn, ZoomOut, Maximize2, Minimize2 } from "lucide-react"
+import { Github, ExternalLink, ChevronLeft, ChevronRight, ZoomIn, ZoomOut, Maximize2, Minimize2, Play } from "lucide-react"
 import { useState, useRef } from "react"
 import React from "react"
 import Image from "next/image"
@@ -140,27 +140,12 @@ export function ProjectModal({ isOpen, onClose, project }: ProjectModalProps) {
   React.useEffect(() => {
     if (!isOpen) {
       setScale(1);
+      setIsFullscreen(false);
     }
   }, [isOpen]);
 
   const toggleFullscreen = () => {
-    if (!document.fullscreenElement && !(document as any).webkitFullscreenElement) {
-      if (imageContainerRef.current) {
-        if ((imageContainerRef.current as any).webkitRequestFullscreen) {
-          (imageContainerRef.current as any).webkitRequestFullscreen()
-        } else {
-          imageContainerRef.current.requestFullscreen()
-        }
-        setIsFullscreen(true)
-      }
-    } else {
-      if ((document as any).webkitFullscreenElement) {
-        (document as any).webkitExitFullscreen()
-      } else {
-        document.exitFullscreen()
-      }
-      setIsFullscreen(false)
-    }
+    setIsFullscreen(!isFullscreen);
   }
 
   const handleThumbnailClick = () => {
@@ -168,31 +153,6 @@ export function ProjectModal({ isOpen, onClose, project }: ProjectModalProps) {
       setShowVideo(true)
     }
   }
-
-  // Atualiza o estado quando o usuário sai da tela cheia usando Esc
-  const handleFullscreenChange = () => {
-    setIsFullscreen(!!document.fullscreenElement || !!(document as any).webkitFullscreenElement)
-  }
-
-  // Adiciona e remove o listener de evento de tela cheia
-  React.useEffect(() => {
-    document.addEventListener("fullscreenchange", handleFullscreenChange)
-    document.addEventListener("webkitfullscreenchange", handleFullscreenChange)
-    return () => {
-      document.removeEventListener("fullscreenchange", handleFullscreenChange)
-      document.removeEventListener("webkitfullscreenchange", handleFullscreenChange)
-    }
-  }, [])
-
-  // Adicione o estilo global para a animação
-  React.useEffect(() => {
-    const style = document.createElement('style')
-    style.textContent = fadeInAnimation
-    document.head.appendChild(style)
-    return () => {
-      document.head.removeChild(style)
-    }
-  }, [])
 
   // Reset slide direction after animation
   React.useEffect(() => {
@@ -204,12 +164,14 @@ export function ProjectModal({ isOpen, onClose, project }: ProjectModalProps) {
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto bg-gradient-to-br from-background to-primary/5">
-        <DialogHeader>
+      <DialogContent className={`max-w-4xl overflow-y-auto bg-gradient-to-br from-background to-primary/5 ${
+        isFullscreen ? 'fixed inset-0 z-[9999] m-0 max-h-screen w-screen rounded-none p-0' : 'max-h-[90vh]'
+      }`}>
+        <DialogHeader className={isFullscreen ? 'hidden' : ''}>
           <DialogTitle className="text-2xl font-bold">{project.title}</DialogTitle>
         </DialogHeader>
         
-        <div className="mt-8">
+        <div className={`mt-8 ${isFullscreen ? 'm-0' : ''}`}>
           {/* Galeria de Imagens */}
           <div 
             ref={imageContainerRef}
@@ -248,9 +210,7 @@ export function ProjectModal({ isOpen, onClose, project }: ProjectModalProps) {
                     />
                     <div className="absolute inset-0 flex items-center justify-center bg-black/40">
                       <div className="w-20 h-20 rounded-full bg-white/10 backdrop-blur-sm flex items-center justify-center">
-                        <svg className="w-10 h-10 text-white" viewBox="0 0 24 24" fill="currentColor">
-                          <path d="M8 5v14l11-7z"/>
-                        </svg>
+                        <Play className="w-12 h-12 text-white" />
                       </div>
                     </div>
                   </div>
@@ -261,27 +221,17 @@ export function ProjectModal({ isOpen, onClose, project }: ProjectModalProps) {
                       ${isFullscreen ? 'w-full h-screen' : 'w-full h-full'}
                       transition-transform duration-500 ease-in-out
                     `}
+                    style={{ transform: `scale(${scale})` }}
                   >
                     <Image
-                      key={galleryIndex}
                       src={gallery[galleryIndex]}
-                      alt={`${project.title} - Imagem`}
+                      alt={`${project.title} - Imagem ${galleryIndex + 1}`}
                       fill
-                      style={{ 
-                        transform: `scale(${scale})`,
-                        transition: 'transform 0.1s ease-out'
-                      }}
                       className={`
                         ${isFullscreen ? 'object-contain w-full h-full' : 'object-cover'} 
                         rounded-lg 
                         transition-all 
-                        duration-500 
-                        ease-in-out
-                        animate-in 
-                        fade-in
-                        ${slideDirection === 'left' ? 'slide-in-from-right' : ''}
-                        ${slideDirection === 'right' ? 'slide-in-from-left' : ''}
-                        ${!slideDirection ? 'zoom-in-95' : ''}
+                        ${slideDirection === 'left' ? 'animate-fadeIn' : slideDirection === 'right' ? 'animate-fadeIn' : ''}
                       `}
                       priority={true}
                       quality={100}
@@ -290,128 +240,117 @@ export function ProjectModal({ isOpen, onClose, project }: ProjectModalProps) {
                 )}
               </div>
             </div>
-            
-            {gallery.length > 1 && (
+
+            {/* Botões de Navegação */}
+            {gallery.length > 1 && !showVideo && !gallery[galleryIndex].includes('youtube.com/embed') && (
               <>
-                {/* Botões de navegação */}
                 <button
                   onClick={prevImage}
                   className="absolute left-2 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-black/50 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                  aria-label="Imagem anterior"
                 >
                   <ChevronLeft className="h-6 w-6" />
                 </button>
                 <button
                   onClick={nextImage}
                   className="absolute right-2 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-black/50 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                  aria-label="Próxima imagem"
                 >
                   <ChevronRight className="h-6 w-6" />
                 </button>
-
-                {/* Indicadores */}
-                <div className="absolute bottom-2 left-1/2 -translate-x-1/2 flex gap-1">
-                  {gallery.map((_, index) => (
-                    <div
-                      key={index}
-                      className={`w-2 h-2 rounded-full transition-all ${
-                        index === galleryIndex
-                          ? "bg-white w-4"
-                          : "bg-white/50"
-                      }`}
-                    />
-                  ))}
-                </div>
               </>
             )}
 
             {/* Botão de Tela Cheia */}
             {!showVideo && !gallery[galleryIndex].includes('youtube.com/embed') && (
-              <div className="absolute top-2 right-2">
-                <button
+              <div className={`absolute bottom-4 right-4 flex gap-2 ${isFullscreen ? 'z-[9999]' : ''}`}>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="bg-black/50 hover:bg-black/75 backdrop-blur-sm text-white h-12 w-12"
                   onClick={toggleFullscreen}
-                  className="w-10 h-10 rounded-full bg-black/50 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
                 >
-                  {isFullscreen ? (
-                    <Minimize2 className="h-5 w-5" />
-                  ) : (
-                    <Maximize2 className="h-5 w-5" />
-                  )}
-                </button>
+                  {isFullscreen ? <Minimize2 className="h-6 w-6" /> : <Maximize2 className="h-6 w-6" />}
+                </Button>
               </div>
             )}
           </div>
-
-          {/* Conteúdo em duas colunas */}
-          <div className="grid md:grid-cols-2 gap-8 mt-10">
-            <div className="space-y-8">
-              <div>
-                <h3 className="text-lg font-semibold mb-3 flex items-center gap-2">
-                  <Badge variant="outline" className="bg-primary/10 text-primary border-primary/20">
-                    Descrição
-                  </Badge>
-                </h3>
-                <p className="text-muted-foreground">{project.description}</p>
-              </div>
-
-              <div>
-                <h3 className="text-lg font-semibold mb-3 flex items-center gap-2">
-                  <Badge variant="outline" className="bg-secondary/10 text-secondary border-secondary/20">
-                    Desafio
-                  </Badge>
-                </h3>
-                <p className="text-muted-foreground">{project.challenge}</p>
-              </div>
-
-              <div>
-                <h3 className="text-lg font-semibold mb-3 flex items-center gap-2">
-                  <Badge variant="outline" className="bg-accent/10 text-accent border-accent/20">
-                    Solução
-                  </Badge>
-                </h3>
-                <p className="text-muted-foreground">{project.solution}</p>
-              </div>
-            </div>
-
-            <div className="space-y-8">
-              <div>
-                <h3 className="text-lg font-semibold mb-3">Tecnologias</h3>
-                <div className="flex flex-wrap gap-2">
-                  {project.technologies.map((tech) => (
-                    <Badge
-                      key={tech}
-                      variant="outline"
-                      className="bg-background/50 border-primary/20"
-                    >
-                      {tech}
+          
+          {/* Descrição e outros detalhes */}
+          <div className={isFullscreen ? 'hidden' : ''}>
+            {/* Conteúdo em duas colunas */}
+            <div className="grid md:grid-cols-2 gap-8 mt-10">
+              <div className="space-y-8">
+                <div>
+                  <h3 className="text-lg font-semibold mb-3 flex items-center gap-2">
+                    <Badge variant="outline" className="bg-primary/10 text-primary border-primary/20">
+                      Descrição
                     </Badge>
-                  ))}
+                  </h3>
+                  <p className="text-muted-foreground">{project.description}</p>
+                </div>
+
+                <div>
+                  <h3 className="text-lg font-semibold mb-3 flex items-center gap-2">
+                    <Badge variant="outline" className="bg-secondary/10 text-secondary border-secondary/20">
+                      Desafio
+                    </Badge>
+                  </h3>
+                  <p className="text-muted-foreground">{project.challenge}</p>
+                </div>
+
+                <div>
+                  <h3 className="text-lg font-semibold mb-3 flex items-center gap-2">
+                    <Badge variant="outline" className="bg-accent/10 text-accent border-accent/20">
+                      Solução
+                    </Badge>
+                  </h3>
+                  <p className="text-muted-foreground">{project.solution}</p>
                 </div>
               </div>
 
-              {(project.github || project.link) && (
+              <div className="space-y-8">
                 <div>
-                  <h3 className="text-lg font-semibold mb-3">Links</h3>
-                  <div className="flex flex-col gap-3">
-                    {project.github && (
-                      <Button
-                        className="w-full bg-gradient-to-r from-primary to-secondary hover:opacity-90 transition-opacity"
-                        onClick={() => window.open(project.github, "_blank")}
+                  <h3 className="text-lg font-semibold mb-3">Tecnologias</h3>
+                  <div className="flex flex-wrap gap-2">
+                    {project.technologies.map((tech) => (
+                      <Badge
+                        key={tech}
+                        variant="outline"
+                        className="bg-background/50 border-primary/20"
                       >
-                        <Github className="mr-2 h-4 w-4" />
-                        Ver Código
-                      </Button>
-                    )}
-                    {project.link && (
-                      <Button
-                        className="w-full bg-gradient-to-r from-secondary to-accent hover:opacity-90 transition-opacity"
-                        onClick={() => window.open(project.link, "_blank")}
-                      >
-                        <ExternalLink className="mr-2 h-4 w-4" />
-                        Ver Demo
-                      </Button>
-                    )}
+                        {tech}
+                      </Badge>
+                    ))}
                   </div>
                 </div>
-              )}
+
+                {(project.github || project.link) && (
+                  <div>
+                    <h3 className="text-lg font-semibold mb-3">Links</h3>
+                    <div className="flex flex-col gap-3">
+                      {project.github && (
+                        <Button
+                          className="w-full bg-gradient-to-r from-primary to-secondary hover:opacity-90 transition-opacity"
+                          onClick={() => window.open(project.github, "_blank")}
+                        >
+                          <Github className="mr-2 h-4 w-4" />
+                          Ver Código
+                        </Button>
+                      )}
+                      {project.link && (
+                        <Button
+                          className="w-full bg-gradient-to-r from-secondary to-accent hover:opacity-90 transition-opacity"
+                          onClick={() => window.open(project.link, "_blank")}
+                        >
+                          <ExternalLink className="mr-2 h-4 w-4" />
+                          Ver Demo
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         </div>
