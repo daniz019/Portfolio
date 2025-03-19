@@ -1,0 +1,465 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 0 0% 100%;
+    --foreground: 240 10% 3.9%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 240 10% 3.9%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 240 10% 3.9%;
+
+    --primary: 250 95% 60%;
+    --primary-rgb: 94, 23, 235;
+    --primary-foreground: 0 0% 98%;
+
+    --secondary: 190 95% 45%;
+    --secondary-rgb: 11, 197, 234;
+    --secondary-foreground: 240 5.9% 10%;
+
+    --accent: 330 90% 65%;
+    --accent-rgb: 236, 64, 122;
+    --accent-foreground: 0 0% 98%;
+
+    --muted: 240 4.8% 95.9%;
+    --muted-foreground: 240 3.8% 46.1%;
+
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 0 0% 98%;
+
+    --border: 240 5.9% 90%;
+    --input: 240 5.9% 90%;
+    --ring: 250 95% 60%;
+
+    --radius: 0.75rem;
+  }
+
+  .dark {
+    --background: 240 10% 3.9%;
+    --foreground: 0 0% 98%;
+
+    --card: 240 10% 3.9%;
+    --card-foreground: 0 0% 98%;
+
+    --popover: 240 10% 3.9%;
+    --popover-foreground: 0 0% 98%;
+
+    --primary: 250 95% 60%;
+    --primary-rgb: 94, 23, 235;
+    --primary-foreground: 0 0% 98%;
+
+    --secondary: 190 95% 45%;
+    --secondary-rgb: 11, 197, 234;
+    --secondary-foreground: 0 0% 98%;
+
+    --accent: 330 90% 65%;
+    --accent-rgb: 236, 64, 122;
+    --accent-foreground: 0 0% 98%;
+
+    --muted: 240 3.7% 15.9%;
+    --muted-foreground: 240 5% 64.9%;
+
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 0 0% 98%;
+
+    --border: 240 3.7% 15.9%;
+    --input: 240 3.7% 15.9%;
+    --ring: 250 95% 60%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
+    @apply font-poppins font-bold;
+  }
+  section {
+    @apply py-16 md:py-24;
+  }
+  .container {
+    @apply px-4 md:px-6 max-w-7xl mx-auto;
+  }
+}
+
+@layer components {
+  .section-title {
+    @apply text-3xl md:text-4xl font-bold mb-4 text-center relative;
+  }
+
+  .section-title::after {
+    content: "";
+    @apply block w-16 h-1 bg-gradient-to-r from-primary to-secondary mx-auto mt-4 rounded-full;
+  }
+
+  .section-subtitle {
+    @apply text-lg text-muted-foreground max-w-2xl mx-auto text-center mb-12;
+  }
+
+  .gradient-text {
+    @apply bg-clip-text text-transparent bg-gradient-to-r from-primary via-secondary to-accent;
+  }
+
+  .card-hover {
+    @apply transition-all duration-300 hover:shadow-lg hover:-translate-y-1;
+  }
+
+  .btn-gradient {
+    @apply bg-gradient-to-r from-primary to-secondary hover:opacity-90 transition-opacity;
+  }
+}
+
+.font-poppins {
+  font-family: var(--font-poppins);
+}
+
+.font-sans {
+  font-family: var(--font-outfit);
+}
+
+.gradient-border {
+  position: relative;
+  border-radius: var(--radius);
+  background: linear-gradient(to right, hsl(var(--primary)), hsl(var(--secondary)));
+  padding: 2px;
+}
+
+.gradient-border > * {
+  background: hsl(var(--background));
+  border-radius: calc(var(--radius) - 2px);
+}
+
+.blob-animation {
+  animation: blob-move 25s cubic-bezier(0.445, 0.05, 0.55, 0.95) infinite;
+}
+
+@keyframes blob-move {
+  0% {
+    transform: translate(0, 0) scale(1);
+  }
+  20% {
+    transform: translate(3%, 3%) scale(1.03);
+  }
+  40% {
+    transform: translate(5%, 0) scale(0.98);
+  }
+  60% {
+    transform: translate(2%, 5%) scale(1.02);
+  }
+  80% {
+    transform: translate(-3%, 2%) scale(0.97);
+  }
+  100% {
+    transform: translate(0, 0) scale(1);
+  }
+}
+
+/* Novas animações e efeitos */
+.skew-x-30 {
+  transform: skewX(30deg);
+}
+
+.shimmer-container {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+}
+
+.shimmer {
+  width: 50%;
+  height: 100%;
+  background: linear-gradient(
+    to right,
+    rgba(255, 255, 255, 0) 0%,
+    rgba(255, 255, 255, 0.5) 50%,
+    rgba(255, 255, 255, 0) 100%
+  );
+  animation: shimmer 2s infinite;
+  transform: skewX(20deg);
+  position: absolute;
+  top: 0;
+  left: -150%;
+}
+
+@keyframes shimmer {
+  100% {
+    left: 150%;
+  }
+}
+
+/* Efeitos 3D sutis */
+.card-3d {
+  transform-style: preserve-3d;
+  perspective: 1000px;
+}
+
+.card-3d-content {
+  transition: transform 0.3s ease;
+  transform: translateZ(0);
+}
+
+.card-3d:hover .card-3d-content {
+  transform: translateZ(20px);
+}
+
+/* Animações adicionais */
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes fade-in-up {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes slide-in-left {
+  from {
+    opacity: 0;
+    transform: translateX(-50px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes slide-in-right {
+  from {
+    opacity: 0;
+    transform: translateX(50px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes scale-in {
+  from {
+    opacity: 0;
+    transform: scale(0.8);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes progress {
+  from {
+    width: 0;
+  }
+  to {
+    width: 100%;
+  }
+}
+
+@keyframes bounce-slow {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
+}
+
+@keyframes wiggle {
+  0%,
+  100% {
+    transform: rotate(0);
+  }
+  25% {
+    transform: rotate(5deg);
+  }
+  75% {
+    transform: rotate(-5deg);
+  }
+}
+
+@keyframes spin-slow {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes spin-slow-reverse {
+  to {
+    transform: rotate(-360deg);
+  }
+}
+
+@keyframes pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.7;
+  }
+}
+
+.animate-fade-in {
+  animation: fade-in 0.5s ease forwards;
+}
+
+.animate-fade-in-up {
+  animation: fade-in-up 0.7s ease forwards;
+}
+
+.animate-slide-in-left {
+  animation: slide-in-left 0.7s ease forwards;
+}
+
+.animate-slide-in-right {
+  animation: slide-in-right 0.7s ease forwards;
+}
+
+.animate-scale-in {
+  animation: scale-in 0.5s ease forwards;
+}
+
+.animate-progress {
+  animation: progress 1s ease-out forwards;
+}
+
+.animate-bounce-slow {
+  animation: bounce-slow 3s ease-in-out infinite;
+}
+
+.animate-wiggle {
+  animation: wiggle 5s ease-in-out infinite;
+}
+
+.animate-spin-slow {
+  animation: spin-slow 20s linear infinite;
+}
+
+.animate-spin-slow-reverse {
+  animation: spin-slow-reverse 25s linear infinite;
+}
+
+.animate-pulse {
+  animation: pulse 2s ease-in-out infinite;
+}
+
+/* Modificar a animação float para criar um movimento contínuo e suave sem saltos */
+@keyframes float {
+  0% {
+    transform: translateY(0) translateX(0);
+  }
+  20% {
+    transform: translateY(-10px) translateX(5px);
+  }
+  40% {
+    transform: translateY(-5px) translateX(10px);
+  }
+  60% {
+    transform: translateY(5px) translateX(5px);
+  }
+  80% {
+    transform: translateY(10px) translateX(-5px);
+  }
+  100% {
+    transform: translateY(0) translateX(0); /* Termina exatamente como começou */
+  }
+}
+
+/* Ajustar a duração da animação float no componente */
+.animate-float {
+  animation: float 30s cubic-bezier(0.445, 0.05, 0.55, 0.95) infinite;
+}
+
+/* Ajustar a animação pulse-slow para ser mais suave */
+@keyframes pulse-slow {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.7;
+  }
+}
+
+.animate-pulse-slow {
+  animation: pulse-slow 8s ease-in-out infinite;
+}
+
+/* Adicionar estas regras no final do arquivo globals.css */
+
+/* Melhorias para interações em dispositivos móveis */
+@media (max-width: 768px) {
+  /* Aumentar área de clique para links e botões */
+  a,
+  button {
+    padding: 0.5rem;
+    margin: -0.5rem;
+  }
+
+  /* Remover highlight de toque em dispositivos móveis */
+  a,
+  button,
+  [role="button"] {
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  /* Melhorar rolagem em dispositivos iOS */
+  * {
+    -webkit-overflow-scrolling: touch;
+  }
+}
+
+/* Animação para o menu mobile */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes slideIn {
+  from {
+    transform: translateX(100%);
+  }
+  to {
+    transform: translateX(0);
+  }
+}
+
+.menu-fade-in {
+  animation: fadeIn 0.3s ease forwards;
+}
+
+.menu-slide-in {
+  animation: slideIn 0.3s ease forwards;
+}
+
