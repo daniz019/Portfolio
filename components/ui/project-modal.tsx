@@ -91,20 +91,26 @@ export function ProjectModal({ isOpen, onClose, project }: ProjectModalProps) {
   const toggleFullscreen = () => {
     if (!document.fullscreenElement && !(document as any).webkitFullscreenElement) {
       if (imageContainerRef.current) {
-        if (imageContainerRef.current.requestFullscreen) {
-          imageContainerRef.current.requestFullscreen()
-        } else if ((imageContainerRef.current as any).webkitRequestFullscreen) {
-          (imageContainerRef.current as any).webkitRequestFullscreen()
-        } else if ((imageContainerRef.current as any).webkitEnterFullscreen) {
-          (imageContainerRef.current as any).webkitEnterFullscreen()
+        try {
+          if ((imageContainerRef.current as any).webkitRequestFullscreen) {
+            (imageContainerRef.current as any).webkitRequestFullscreen()
+          } else if (imageContainerRef.current.requestFullscreen) {
+            imageContainerRef.current.requestFullscreen()
+          }
+        } catch (err) {
+          console.error('Erro ao entrar em tela cheia:', err)
         }
         setIsFullscreen(true)
       }
     } else {
-      if (document.exitFullscreen) {
-        document.exitFullscreen()
-      } else if ((document as any).webkitExitFullscreen) {
-        (document as any).webkitExitFullscreen()
+      try {
+        if ((document as any).webkitExitFullscreen) {
+          (document as any).webkitExitFullscreen()
+        } else if (document.exitFullscreen) {
+          document.exitFullscreen()
+        }
+      } catch (err) {
+        console.error('Erro ao sair da tela cheia:', err)
       }
       setIsFullscreen(false)
     }
@@ -116,16 +122,12 @@ export function ProjectModal({ isOpen, onClose, project }: ProjectModalProps) {
     }
   }
 
-  // Atualiza o estado quando o usuário sai da tela cheia usando Esc ou botão do iOS
+  // Atualiza o estado quando o usuário sai da tela cheia
   const handleFullscreenChange = () => {
-    setIsFullscreen(
-      !!document.fullscreenElement || 
-      !!(document as any).webkitFullscreenElement || 
-      !!(document as any).webkitIsFullScreen
-    )
+    const isInFullscreen = !!document.fullscreenElement || !!(document as any).webkitFullscreenElement
+    setIsFullscreen(isInFullscreen)
   }
 
-  // Adiciona e remove os listeners de evento de tela cheia para diferentes navegadores
   React.useEffect(() => {
     document.addEventListener("fullscreenchange", handleFullscreenChange)
     document.addEventListener("webkitfullscreenchange", handleFullscreenChange)
@@ -164,21 +166,16 @@ export function ProjectModal({ isOpen, onClose, project }: ProjectModalProps) {
           {/* Galeria de Imagens */}
           <div 
             ref={imageContainerRef}
-            className={`relative group aspect-video bg-black/10 rounded-lg overflow-hidden ${
-              isFullscreen ? 'fixed inset-0 z-[9999] bg-black w-screen h-screen' : ''
-            }`}
-            style={{
-              maxWidth: '100vw',
-              maxHeight: '100vh',
-              WebkitBackfaceVisibility: 'hidden',
-              WebkitTransform: 'translate3d(0, 0, 0)',
-            }}
+            className={`
+              relative group bg-black/10 rounded-lg overflow-hidden
+              ${isFullscreen ? 'fixed inset-0 z-[9999] bg-black' : 'aspect-video'}
+            `}
             onTouchStart={handleTouchStart}
             onTouchMove={handleTouchMove}
             onTouchEnd={handleTouchEnd}
           >
-            <div className={`relative ${isFullscreen ? 'w-full h-full flex items-center justify-center' : 'w-full h-full'}`}>
-              <div className={`relative ${isFullscreen ? 'w-full h-full flex items-center justify-center' : 'aspect-video'}`}>
+            <div className="relative w-full h-full flex items-center justify-center">
+              <div className={`relative ${isFullscreen ? 'w-full h-full' : 'aspect-video w-full'}`}>
                 {showVideo ? (
                   <iframe
                     src={`https://www.youtube.com/embed/${project.youtubeId}?rel=0`}
@@ -192,16 +189,7 @@ export function ProjectModal({ isOpen, onClose, project }: ProjectModalProps) {
                       src={`https://i.ytimg.com/vi/${project.youtubeId}/maxresdefault.jpg`}
                       alt={`${project.title} - Thumbnail`}
                       fill
-                      className={`
-                        ${isFullscreen ? 'object-contain' : 'object-cover'} 
-                        rounded-lg 
-                        w-full 
-                        h-full
-                      `}
-                      style={{
-                        maxWidth: isFullscreen ? '100vw' : '100%',
-                        maxHeight: isFullscreen ? '100vh' : '100%',
-                      }}
+                      className={`${isFullscreen ? 'object-contain' : 'object-cover'} rounded-lg`}
                       priority={true}
                       quality={100}
                       onError={(e) => {
@@ -221,13 +209,7 @@ export function ProjectModal({ isOpen, onClose, project }: ProjectModalProps) {
                     </div>
                   </div>
                 ) : (
-                  <div 
-                    className={`
-                      relative 
-                      ${isFullscreen ? 'w-screen h-screen flex items-center justify-center' : 'w-full h-full'}
-                      transition-transform duration-500 ease-in-out
-                    `}
-                  >
+                  <div className={`relative w-full h-full`}>
                     <Image
                       key={galleryIndex}
                       src={gallery[galleryIndex]}
@@ -239,16 +221,9 @@ export function ProjectModal({ isOpen, onClose, project }: ProjectModalProps) {
                         transition-all 
                         duration-500 
                         ease-in-out
-                        animate-in 
-                        fade-in
                         ${slideDirection === 'left' ? 'slide-in-from-right' : ''}
                         ${slideDirection === 'right' ? 'slide-in-from-left' : ''}
-                        ${!slideDirection ? 'zoom-in-95' : ''}
                       `}
-                      style={{
-                        maxWidth: isFullscreen ? '100vw' : '100%',
-                        maxHeight: isFullscreen ? '100vh' : '100%',
-                      }}
                       priority={true}
                       quality={100}
                     />
