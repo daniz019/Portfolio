@@ -44,6 +44,29 @@ const fadeInAnimation = `
   }
 `
 
+// Estilo específico para iOS em fullscreen
+const iOSFullscreenFix = `
+  /* Fix para iOS */
+  @supports (-webkit-touch-callout: none) {
+    .ios-fullscreen-fix {
+      position: fixed !important;
+      top: 0 !important;
+      left: 0 !important;
+      right: 0 !important;
+      bottom: 0 !important;
+      width: 100% !important;
+      height: 100% !important;
+      max-width: none !important;
+      max-height: none !important;
+      margin: 0 !important;
+      padding: 0 !important;
+      transform: none !important;
+      border-radius: 0 !important;
+      z-index: 9999 !important;
+    }
+  }
+`
+
 export function ProjectModal({ isOpen, onClose, project }: ProjectModalProps) {
   const [galleryIndex, setGalleryIndex] = useState(0)
   const [showVideo, setShowVideo] = useState(false)
@@ -113,11 +136,10 @@ export function ProjectModal({ isOpen, onClose, project }: ProjectModalProps) {
     }
   }, [isFullscreen])
 
-  // Remover ouvintes de evento nativo fullscreen (não é usado mais)
-  // Adicione o estilo global para a animação
+  // Adicione o estilo global para a animação e fix para iOS
   React.useEffect(() => {
     const style = document.createElement('style')
-    style.textContent = fadeInAnimation
+    style.textContent = fadeInAnimation + iOSFullscreenFix
     document.head.appendChild(style)
     return () => {
       document.head.removeChild(style)
@@ -140,14 +162,18 @@ export function ProjectModal({ isOpen, onClose, project }: ProjectModalProps) {
       }
       onClose();
     }}>
-      <DialogContent className={`max-w-4xl max-h-[90vh] overflow-y-auto bg-gradient-to-br from-background to-primary/5 ${isFullscreen ? 'p-0 max-w-full max-h-full h-screen m-0 rounded-none' : ''}`}>
+      <DialogContent className={`
+        ${isFullscreen 
+          ? 'p-0 !max-w-none !max-h-none !w-full !h-screen !m-0 !rounded-none !inset-0 !top-0 !left-0 !translate-x-0 !translate-y-0 !border-0 fixed ios-fullscreen-fix' 
+          : 'max-w-4xl max-h-[90vh]'
+        } overflow-y-auto bg-gradient-to-br from-background to-primary/5`}>
         {isFullscreen ? (
           <div className="absolute top-4 right-4 z-[9999]">
             <button
               onClick={toggleFullscreen}
-              className="w-10 h-10 rounded-full bg-black/50 text-white flex items-center justify-center"
+              className="w-12 h-12 rounded-full bg-black/70 text-white flex items-center justify-center"
             >
-              <Minimize2 className="h-5 w-5" />
+              <Minimize2 className="h-6 w-6" />
             </button>
           </div>
         ) : (
@@ -161,14 +187,14 @@ export function ProjectModal({ isOpen, onClose, project }: ProjectModalProps) {
           <div 
             ref={imageContainerRef}
             className={`relative group bg-black/10 rounded-lg overflow-hidden ${
-              isFullscreen ? 'fixed inset-0 z-[9999] bg-black h-full flex items-center justify-center' : 'aspect-video'
+              isFullscreen ? 'fixed inset-0 z-[9999] bg-black h-full w-full flex items-center justify-center' : 'aspect-video'
             }`}
             onTouchStart={handleTouchStart}
             onTouchMove={handleTouchMove}
             onTouchEnd={handleTouchEnd}
           >
-            <div className={`relative ${isFullscreen ? 'w-full h-screen flex items-center justify-center' : 'w-full h-full'}`}>
-              <div className={`relative ${isFullscreen ? 'w-full h-full' : 'aspect-video mb-6'}`}>
+            <div className={`relative ${isFullscreen ? 'w-full h-full flex items-center justify-center' : 'w-full h-full'}`}>
+              <div className={`relative ${isFullscreen ? 'w-full h-full flex items-center justify-center' : 'aspect-video mb-6'}`}>
                 {showVideo ? (
                   <iframe
                     src={`https://www.youtube.com/embed/${project.youtubeId}?rel=0`}
@@ -205,9 +231,10 @@ export function ProjectModal({ isOpen, onClose, project }: ProjectModalProps) {
                   <div 
                     className={`
                       relative 
-                      ${isFullscreen ? 'w-full h-screen' : 'w-full h-full'}
+                      ${isFullscreen ? 'w-full h-full' : 'w-full h-full'}
                       transition-transform duration-500 ease-in-out
                     `}
+                    style={isFullscreen ? { width: '100vw', height: '100vh' } : {}}
                   >
                     <Image
                       key={galleryIndex}
@@ -215,7 +242,7 @@ export function ProjectModal({ isOpen, onClose, project }: ProjectModalProps) {
                       alt={`${project.title} - Imagem`}
                       fill
                       className={`
-                        ${isFullscreen ? 'object-contain w-full h-full' : 'object-cover'} 
+                        ${isFullscreen ? 'object-contain !w-full !h-full' : 'object-cover'} 
                         rounded-lg 
                         transition-all 
                         duration-500 
@@ -228,6 +255,17 @@ export function ProjectModal({ isOpen, onClose, project }: ProjectModalProps) {
                       `}
                       priority={true}
                       quality={100}
+                      sizes={isFullscreen ? "100vw" : "50vw"}
+                      style={isFullscreen ? { 
+                        objectFit: 'contain', 
+                        width: '100%', 
+                        height: '100%',
+                        position: 'absolute',
+                        top: 0,
+                        left: 0,
+                        right: 0,
+                        bottom: 0
+                      } : {}}
                     />
                   </div>
                 )}
