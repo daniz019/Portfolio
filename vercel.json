@@ -1,7 +1,7 @@
 {
   "version": 2,
-  "buildCommand": "npm run build",
-  "devCommand": "npm run dev",
-  "installCommand": "npm install",
+  "buildCommand": "cd portfolio && npm run build",
+  "devCommand": "cd portfolio && npm run dev",
+  "installCommand": "cd portfolio && npm install",
   "framework": "nextjs"
 } 
