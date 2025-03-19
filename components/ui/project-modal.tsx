@@ -167,15 +167,15 @@ export function ProjectModal({ isOpen, onClose, project }: ProjectModalProps) {
           <div 
             ref={imageContainerRef}
             className={`
-              relative group bg-black/10 rounded-lg overflow-hidden
-              ${isFullscreen ? 'fixed inset-0 z-[9999] bg-black' : 'aspect-video'}
+              relative group bg-black rounded-lg overflow-hidden
+              ${isFullscreen ? 'fixed inset-0 z-[9999] w-screen h-screen' : 'aspect-video'}
             `}
             onTouchStart={handleTouchStart}
             onTouchMove={handleTouchMove}
             onTouchEnd={handleTouchEnd}
           >
-            <div className="relative w-full h-full flex items-center justify-center">
-              <div className={`relative ${isFullscreen ? 'w-full h-full' : 'aspect-video w-full'}`}>
+            <div className="absolute inset-0 flex items-center justify-center">
+              <div className={`relative ${isFullscreen ? 'w-screen h-screen' : 'w-full aspect-video'}`}>
                 {showVideo ? (
                   <iframe
                     src={`https://www.youtube.com/embed/${project.youtubeId}?rel=0`}
@@ -209,12 +209,13 @@ export function ProjectModal({ isOpen, onClose, project }: ProjectModalProps) {
                     </div>
                   </div>
                 ) : (
-                  <div className={`relative w-full h-full`}>
+                  <div className="relative w-full h-full">
                     <Image
                       key={galleryIndex}
                       src={gallery[galleryIndex]}
                       alt={`${project.title} - Imagem`}
                       fill
+                      sizes={isFullscreen ? "100vw" : "50vw"}
                       className={`
                         ${isFullscreen ? 'object-contain' : 'object-cover'} 
                         rounded-lg 
